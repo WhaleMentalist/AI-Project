@@ -1,6 +1,10 @@
 package dani6621;
 
+import java.awt.Color;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -12,7 +16,9 @@ import spacesettlers.actions.MoveAction;
 import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
 import spacesettlers.clients.TeamClient;
+import spacesettlers.graphics.LineGraphics;
 import spacesettlers.graphics.SpacewarGraphics;
+import spacesettlers.graphics.StarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
@@ -34,6 +40,11 @@ public class ReflexAgent extends TeamClient {
 	 * Constant will delimit whether agent can build a base
 	 */
 	private static final double MINIMUM_BASE_PURCHASE_DISTANCE = 500.0;
+	
+	/**
+	 * Amount of time to wait before creating a new map
+	 */
+	private static final int NEW_MAP_TIMESTEP = 20;
 
     /**
      * Represents how agent will perceive world state. You can
@@ -46,6 +57,17 @@ public class ReflexAgent extends TeamClient {
      * on objects
      */
     private boolean findingRandomLocation;
+    
+    /**
+     * The abstracted map of the space to help the agent navigate
+     * in an effective manner (i.e quickest path and avoid obstacles)
+     */
+    private NavigationMap map;
+    
+    /**
+     * Graphics to add to help debug the navigation map implementation
+     */
+    private ArrayList<SpacewarGraphics> graphicsToAdd;
 
     /**
      * Assigns ships to asteroids and beacons, as described above
@@ -78,6 +100,54 @@ public class ReflexAgent extends TeamClient {
         AbstractAction newAction;
         Position randomLocation;
         perceive(space, ship);
+        
+        // Generate a new map every set time step to deal with dynamic environment
+        if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+        	 map = new NavigationMap(space, knowledge);
+        }
+        
+        Position vertexPosition;
+        List<Position> neighborPositions;
+        LineGraphics line;
+        
+        // Draw nodes of graph and their respective connections
+        for(int i = 0; i < map.rowNodeNumber; ++i) {
+        	for(int j = 0; j < map.columnNodeNumber; ++j) {
+        		vertexPosition = map.getPositionOfVertex(i, j);
+        		graphicsToAdd.add(new StarGraphics(3, Color.RED, vertexPosition));
+        		neighborPositions = map.getNeighborPosition(i, j);
+        		
+        		// Loop through each neighbor position and form a line
+        		for(Position position : neighborPositions) {
+        			line = new LineGraphics(vertexPosition, position, 
+            				space.findShortestDistanceVector(vertexPosition, position));
+            		line.setLineColor(Color.RED);
+            		graphicsToAdd.add(line);
+        		}
+        	}
+        }
+        
+        /*
+        // Get neighbor map
+        Map<Graph<NavigationNode>.Vertex, List<Graph<NavigationNode>.Vertex>> connections = map.getVertexToNeighborMap();
+        Position centralPosition;
+        Position neighborPosition;
+        LineGraphics line;
+        
+        /*
+        // Get central node and then its neighbors
+        for(Entry<Graph<NavigationNode>.Vertex, List<Graph<NavigationNode>.Vertex>> entry : connections.entrySet()) {
+        	centralPosition = entry.getKey().data.position;
+        	
+        	for(Graph<NavigationNode>.Vertex v : entry.getValue()) {
+        		neighborPosition = v.data.position;
+        		line = new LineGraphics(centralPosition, neighborPosition, 
+        				space.findShortestDistanceVector(centralPosition, neighborPosition));
+        		line.setLineColor(Color.RED);
+        		graphicsToAdd.add(line);
+        	}
+        }
+        */
         
         if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
             AbstractObject source = knowledge.getClosestEnergySource();
@@ -163,6 +233,7 @@ public class ReflexAgent extends TeamClient {
     @Override
     public void initialize(Toroidal2DPhysics space) {
     	findingRandomLocation = false;
+    	graphicsToAdd = new ArrayList<SpacewarGraphics>();
     }
 
     @Override
@@ -173,8 +244,10 @@ public class ReflexAgent extends TeamClient {
 
     @Override
     public Set<SpacewarGraphics> getGraphics() {
-        // TODO Auto-generated method stub
-        return null;
+    	HashSet<SpacewarGraphics> graphics = new HashSet<SpacewarGraphics>();
+		graphics.addAll(graphicsToAdd);
+		graphicsToAdd.clear();
+		return graphics;
     }
 
     /**
