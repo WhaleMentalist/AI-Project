@@ -1,6 +1,9 @@
 package dani6621;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Implementation of graph uses adjacency list
@@ -12,22 +15,76 @@ import java.util.*;
  * as an undirected, but it DOES have weights. The 
  * weights will NOT be negative
  */
-public class Graph<Z> {
+public class Graph<K, V> {
 	
 	/**
-	 * A parameterized <code>Node</code> implementation that
-	 * will allow flexibility of how the graph can represent 
-	 * data
-	 *
-	 * @param <T> the data type of the graph
+	 * The value that will be mapped in the <code>graph</code>
+	 * data member. It will contain the <code>Vertex</code> 
+	 * parameterized data type and a list of edges that connect
+	 * vertex
 	 */
-	private class Vertex {
+	public class Vertex {
+
+		/**
+		 * The data associated with the vertex
+		 */
+		public final V data;
 		
 		/**
-		 * Data contained in the vertex (i.e name, position,
-		 * or even number)
+		 * The set of edges that vertex has with
+		 * other vertices
 		 */
-		public Z data;
+		public final List<Edge> edges;
+		
+		/**
+		 * Initialize the the vertex with no edges, 
+		 * but with vertex data
+		 * 
+		 * @param v the vertex data as a parameterized 
+		 * 				type
+		 */
+		public Vertex(V v) {
+			data = v;
+			edges = new LinkedList<Edge>();
+		}
+		
+		/**
+		 * Auto-generated
+		 */
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((data == null) ? 0 : data.hashCode());
+			return result;
+		}
+		
+		/**
+		 * Auto-generated
+		 */
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Vertex other = (Vertex) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (data == null) {
+				if (other.data != null)
+					return false;
+			} else if (!data.equals(other.data))
+				return false;
+			return true;
+		}
+
+		private Graph<K, V> getOuterType() {
+			return Graph.this;
+		}
 	}
 	
 	/**
@@ -36,26 +93,26 @@ public class Graph<Z> {
 	 * weight (i.e cost)
 	 *
 	 */
-	private class Edge {
+	public class Edge {
 		
 		/**
 		 * The vertex the edge is connected 
 		 */
-		public Vertex vertex;
+		public final Vertex endVertex;
 		
 		/**
 		 * The weight of the given edge
 		 */
-		public int weight;
+		public final int weight;
 		
 		/**
 		 * Constructor to initialize edge
 		 * 
-		 * @param v the vertex connected to edge
+		 * @param end the vertex connected to edge
 		 * @param w the weight of the edge
 		 */
-		public Edge(Vertex v, int w) {
-			vertex = v;
+		public Edge(Vertex end, int w) {
+			endVertex = end;
 			weight = w;
 		}
 	}
@@ -79,47 +136,98 @@ public class Graph<Z> {
 	 * [4] => []
 	 * [5] => [0]
 	 */
-	private Map<Vertex, LinkedList<Edge>> graph;
+	private Map<K, Vertex> graph;
 	
 	/**
 	 * Constructor initializes graph
 	 * @param verticeCount the number vertices in the graph
 	 */
 	public Graph(int verticeCount) {
-		graph = new HashMap<Vertex, 
-				LinkedList<Edge>>(verticeCount); // Initialize to fit the number of required vertices
+		graph = new HashMap<K, Vertex>(verticeCount); // Initialize to fit the number of required vertices
 	}
 	
 	/**
-	 * Function will add an edge between the start vertex and 
-	 * go to the end vertex with the corresponding weight. Since
-	 * the graph is undirected, the function will add an edge to 
-	 * both of the vertice's adjacency list
+	 * Function will add the vertex specified by the 
+	 * key. Keep in mind both parameters are 
+	 * generic 'type' taking on any form.
 	 * 
-	 * @param startVertex the start location of the edge
-	 * @param endVertex the end location of the edge
+	 * @param key the key used to map the <code>Value</code>
+	 * @param data the data used to initialize a <code>Vertex</code>
+	 * 				object
+	 */
+	public void addVertex(K key, V data) {
+		Vertex v = new Vertex(data);
+		graph.put(key, v);
+	}
+	
+	/**
+	 * Function will add an <code>Edge</code> between 
+	 * two vertices specified by the keys passed
+	 * 
+	 * @param startKey the key to the start vertex
+	 * @param endKey the key to the end vertex
 	 * @param weight the weight of the edge
 	 */
-	public void addEdge(Vertex startVertex, Vertex endVertex, int weight) {
-		graph.get(startVertex).add(Graph.HEAD, new Edge(endVertex, weight)); // Add at head of linked list
-		graph.get(endVertex).add(Graph.HEAD, new Edge(startVertex, weight)); // Add other way as well
+	public void addEdge(K startKey, K endKey, int weight) {
+		Vertex startVertex = graph.get(startKey);
+		Vertex endVertex = graph.get(endKey);
+		
+		// Add edge on both nodes, since graph is undirected
+		graph.get(startKey).edges.add(new Edge(endVertex, weight));
+		graph.get(endKey).edges.add(new Edge(startVertex, weight));
+	}
+	
+	/**
+	 * Function will retrieve edges from vertex specified 
+	 * by the key
+	 * 
+	 * @param key the key to search for and retrieve the list
+	 * 
+	 * @return the <code>List</code> of <code>Edge</code> objects
+	 */
+	public List<Edge> getEdges(K key) {
+		return graph.get(key).edges;
+	}
+	
+	/**
+	 * Retrieve a vertex specified by key
+	 * 
+	 * @param k the key used to get the vertex
+	 * @return a <code>Vertex</code> object if found, otherwise <code>null</code>
+	 */
+	public Vertex getVertex(K k) {
+		return graph.get(k);
+	}
+	
+	/**
+	 * Function will check if a key exists in 
+	 * graph
+	 * 
+	 * @param k the key to look and check for
+	 * @return a <code>boolean</code> of the result
+	 */
+	public boolean containVertex(K k) {
+		return graph.containsKey(k);
 	}
 	
 	/**
 	 * Function will return <code>boolean</code> result of checking if
-	 * two vertices are connected to an edge
+	 * two vertices are connected to an edge. Since the branching factor
+	 * is at maximum eight, the time complexity of this function isn't too
+	 * worrisome.
 	 * 
-	 * @param vertex1 the first vertex
-	 * @param vertex2 the second vertex
+	 * @param vertexOneKey the first vertex key
+	 * @param vertexTwoKey the second vertex key
 	 * @return a <code>boolean</code> result of whether two vertices
 	 * 			are connected by an <code>Edge</code>
 	 */
-	public boolean isConnected(Vertex vertex1, Vertex vertex2) {
-		LinkedList<Edge> neighbors = graph.get(vertex1); // Get the neighbors of vertex
+	public boolean isConnected(K vertexOneKey, K vertexTwoKey) {
+		List<Edge> edges = graph.get(vertexOneKey).edges;
+		Vertex vertexTwo = graph.get(vertexTwoKey);
 		
-		// Loop through each vertex and check if 'vertex2' is in the list
-		for(Edge edge : neighbors) {
-			if(edge.vertex == vertex2) { // Return true if 'vertex2' is found. Comparison by reference!
+		// Loop through each vertex and check if 'vertexTwo' is in the list
+		for(Edge edge : edges) {
+			if(edge.endVertex == vertexTwo) { // Check if reference is same
 				return true;
 			}
 		}
@@ -135,13 +243,16 @@ public class Graph<Z> {
 	 * @return the weight between the two vertices, if the returned value is negative
 	 * 			then there is no connection!
 	 */
-	public int getWeight(Vertex vertex1, Vertex vertex2) {
-		int weight = -1;
-		LinkedList<Edge> neighbors = graph.get(vertex1);
+	public int getWeight(K vertexOneKey, K vertexTwoKey) {
+		int weight = -1; // Initialize to negative as flag
 		
-		for(Edge edge : neighbors) {
-			if(edge.vertex == vertex2) { // Found the connection
-				weight = edge.weight;
+		List<Edge> edges = graph.get(vertexOneKey).edges;
+		Vertex vertexTwo = graph.get(vertexTwoKey);
+		
+		// Loop through each vertex and check if 'vertexTwo' is in the list
+		for(Edge edge : edges) {
+			if(edge.endVertex == vertexTwo) { // Check if reference is same
+				weight =  edge.weight;
 				break;
 			}
 		}
