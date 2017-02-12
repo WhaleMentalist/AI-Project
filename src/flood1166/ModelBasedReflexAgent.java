@@ -254,16 +254,6 @@ public class ModelBasedReflexAgent extends TeamClient{
     }
 
     
-    /**
-     * Private methods that returns null whenever the agent chooses not to perform an action
-     * @return
-     */
-    private AbstractAction DoNothingAction() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-    
 	/**
      * Allows agent to populate the <code>WorldState</code>
      * with data about its percepts
@@ -295,7 +285,7 @@ public class ModelBasedReflexAgent extends TeamClient{
     	//Switch internal state to false if the energy beacon or base has been captured
     	if(internalState.isBoolCharge()){
         	
-    		if(knowledge.getCurrentEnergy() > knowledge.LOW_ENERGY){
+    		if(knowledge.getCurrentEnergy() > EnhancedWorldState.LOW_ENERGY){
 	        	internalState.setBoolCharge(false);
 	        	internalState.setTargetCharge(null);        
     		}

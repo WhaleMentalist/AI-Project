@@ -2,8 +2,6 @@ package flood1166;
 
 import spacesettlers.objects.*;
 
-import java.util.*;
-
 /*
  *	This class will store previous actions taken by the agent.  Since a significant 
  *	amount of time is wasted in turning the ship, this internal state will ensure that
