@@ -111,7 +111,7 @@ public class NavigationMap {
 	/**
 	 * The spacing between each node in the graph
 	 */
-	private static final int SPACING = 120; // Remember: Use 40 when not debugging
+	private static final int SPACING = 80; // Remember: Use 40 when not debugging, 200 for debugging
 	
 	/**
 	 * The offset of the connection algorithm
@@ -283,5 +283,6 @@ public class NavigationMap {
 				}
 			}
 		}
+		addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), (((vertexColumn - 1)) % columnNodeNumber));
 	}
  }
