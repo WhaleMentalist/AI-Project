@@ -12,6 +12,7 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
 import spacesettlers.utilities.Vector2D;
 
+//poop
 /**
  * Essentially the knowledge representation of the agent. It will 
  * store some useful constants to delimit key states and it also has 
