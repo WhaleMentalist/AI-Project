@@ -6,6 +6,9 @@ import java.util.List;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
+import spacesettlers.objects.AbstractObject;
+
+import dani6621.Graph.Vertex;
 
 /**
  * Class will take simulation map and create an abstraction
@@ -178,6 +181,7 @@ public class NavigationMap {
 		NavigationVertexKey key;
 		NavigationVertex vertex;
 		
+		//row/columns are backwards
 		// Enumerate through rows after columns
 		for(int i = 0; i < rowNodeNumber; ++i) {
 			// Go down along column first
@@ -291,4 +295,28 @@ public class NavigationMap {
 		
 		addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), ((vertexColumn - 1) % columnNodeNumber));
 	}
+	
+	/**Finds the coordinate vertex that is closest to the passed object
+	 * 
+	 * @param myObj - Passes an abstract object
+	 * @return Vertex object that is closest to the argument
+	 */
+	public Vertex findNearestVertex(AbstractObject myObj){
+		
+		Position objPos = myObj.getPosition();
+		Double xCoord = objPos.getX();
+		Double yCoord = objPos.getY();
+		
+		//Convert to grid space
+		int gridxCoord = (int)Math.round(xCoord / SPACING);
+		int gridyCoord = (int)Math.round(yCoord / SPACING);
+		
+		//Create navigation vertex key map
+		NavigationVertexKey nearestKey = new NavigationVertexKey(gridxCoord, gridyCoord);
+		Vertex nearestVert = dataPoints.getVertex(nearestKey);
+		
+		return nearestVert;
+	}
+	
+	
  }
