@@ -127,28 +127,6 @@ public class ReflexAgent extends TeamClient {
         	}
         }
         
-        /*
-        // Get neighbor map
-        Map<Graph<NavigationNode>.Vertex, List<Graph<NavigationNode>.Vertex>> connections = map.getVertexToNeighborMap();
-        Position centralPosition;
-        Position neighborPosition;
-        LineGraphics line;
-        
-        /*
-        // Get central node and then its neighbors
-        for(Entry<Graph<NavigationNode>.Vertex, List<Graph<NavigationNode>.Vertex>> entry : connections.entrySet()) {
-        	centralPosition = entry.getKey().data.position;
-        	
-        	for(Graph<NavigationNode>.Vertex v : entry.getValue()) {
-        		neighborPosition = v.data.position;
-        		line = new LineGraphics(centralPosition, neighborPosition, 
-        				space.findShortestDistanceVector(centralPosition, neighborPosition));
-        		line.setLineColor(Color.RED);
-        		graphicsToAdd.add(line);
-        	}
-        }
-        */
-        
         if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
             AbstractObject source = knowledge.getClosestEnergySource();
 
@@ -198,6 +176,7 @@ public class ReflexAgent extends TeamClient {
             	newAction = new MoveAction(space, ship.getPosition(),
                         closestAsteroid.getPosition(),
                             (knowledge.calculateInterceptVelocity(closestAsteroid)));
+            	graphicsToAdd.add(new StarGraphics(Color.YELLOW, map.findNearestVertex(closestAsteroid).position));
             }
             else { // We couldn't find an asteroid, so move to a random location that is clear
             	if(!(findingRandomLocation)) { // Check if we are going to random location already
