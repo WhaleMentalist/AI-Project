@@ -111,7 +111,7 @@ public class NavigationMap {
 	/**
 	 * The spacing between each node in the graph
 	 */
-	private static final int SPACING = 80; // Remember: Use 40 when not debugging, 200 for debugging
+	private static final int SPACING = 100; // Remember: Use 40 when not debugging, 200 for debugging
 	
 	/**
 	 * The offset of the connection algorithm
@@ -283,6 +283,12 @@ public class NavigationMap {
 				}
 			}
 		}
-		addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), (((vertexColumn - 1)) % columnNodeNumber));
+		
+		// Edge case: When the specified column is zero, we need to connect both diagonal up and diagonal down (Torus space)
+		if(vertexColumn == 0) {
+			addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), (columnNodeNumber - 1));
+		}
+		
+		addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), ((vertexColumn - 1) % columnNodeNumber));
 	}
  }
