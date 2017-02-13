@@ -1,5 +1,6 @@
 package dani6621;
 
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -301,20 +302,84 @@ public class NavigationMap {
 	 * @return Vertex object that is closest to the argument
 	 */
 	public NavigationVertex findNearestVertex(AbstractObject myObj){
-		
 		Position objPos = myObj.getPosition();
 		Double xCoord = objPos.getX();
 		Double yCoord = objPos.getY();
 		
 		//Convert to grid space
-		int gridxCoord = ((int)Math.round(xCoord / SPACING) % rowNodeNumber);
-		int gridyCoord = ((int)Math.round(yCoord / SPACING) % columnNodeNumber);
+		int rowNumber = ((int)Math.round(xCoord / SPACING) % rowNodeNumber);
+		int columnNumber = ((int)Math.round(yCoord / SPACING) % columnNodeNumber);
 		
 		//Create navigation vertex key map
-		NavigationVertexKey nearestKey = new NavigationVertexKey(gridxCoord, gridyCoord);
+		NavigationVertexKey nearestKey = new NavigationVertexKey(rowNumber, columnNumber);
 		NavigationVertex nearestVert = dataPoints.getVertex(nearestKey).data;
 		
 		return nearestVert;
+	}
+	
+	/**
+	 * Function will retrieve the key for the given <code>NavigationVertex</code>
+	 * using the <code>SPACING</code> constant
+	 * 
+	 * @param vertex the vertex whose key will be retrieved
+	 * @return a <code>NavigationVertexKey</code> of the <code>NavigationVertex</code>
+	 * 			passed
+	 */
+	private NavigationVertexKey getNavigationVertexKey(NavigationVertex vertex) {
+		Position vertexPos = vertex.position;
+		Double xCoord = vertexPos.getX();
+		Double yCoord = vertexPos.getY();
+		
+		//Convert to grid space
+		int rowNumber = ((int)Math.round(xCoord / SPACING) % rowNodeNumber);
+		int columnNumber = ((int)Math.round(yCoord / SPACING) % columnNodeNumber);
+		
+		return new NavigationVertexKey(rowNumber, columnNumber);
+	}
+	
+	/**
+	 * Function will form a path from the ship to object using the graph 
+	 * implementation (i.e the <code>dataPoints</code> data member
+	 * 
+	 * @param ship the ship as an object (i.e initial state)
+	 * @param object the goal object (i.e the goal state)
+	 * @return a <code>List</code> of <code>NavigationVertex</code>
+	 */
+	public List<NavigationVertex> formPath(AbstractObject ship, AbstractObject object) {
+		
+		return null;
+	}
+	
+	/**
+	 * Function will calculate a heuristic value given a random node and the 
+	 * goal node. The time complexity is constant, thereby fulfilling requirement
+	 * of the project. The heuristic is the straight line distance (relatively simple,
+	 * yet powerful heuristic). Used in 'A*' algorithm.
+	 * 
+	 * @param node	the node that will have its heuristic value calculated
+	 * @param goalNode	the location of the goal that will be used to calculate the 
+	 * 					heuristic
+	 * @return the value of the heuristic of the <code>node</code> parameter as an integer
+	 * 			quantity
+	 */
+	private int calculateHeuristic(NavigationVertex node, NavigationVertex goalNode) {
+		return (int) Math.ceil(spaceRef.findShortestDistance(node.position, goalNode.position));
+	}
+	
+	/**
+	 * Function will retrieve the weight between the two nodes (if one exists). If 
+	 * an <code>Edge</code> does not exist between the two nodes, then a value of -1 
+	 * is returned. Used in 'A*' algorithm.
+	 * 
+	 * @param start the start location 
+	 * @param end the end location
+	 * @return a weight value corresponding to distance cost between nodes
+	 */
+	private int calculateCost(NavigationVertex start, NavigationVertex end) {
+		NavigationVertexKey startKey = getNavigationVertexKey(start);
+		NavigationVertexKey endKey = getNavigationVertexKey(end);
+		
+		return dataPoints.getWeight(startKey, endKey);
 	}
 	
 	
