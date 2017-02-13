@@ -8,8 +8,6 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
 import spacesettlers.objects.AbstractObject;
 
-import dani6621.Graph.Vertex;
-
 /**
  * Class will take simulation map and create an abstraction
  * using sample data points. Under the hood the class will use
@@ -93,7 +91,7 @@ public class NavigationMap {
 	 * The vertex that will represent the 
 	 * navigation map vertices
 	 */
-	private class NavigationVertex {
+	public class NavigationVertex {
 		
 		/**
 		 * The position of the node in the 
@@ -296,24 +294,25 @@ public class NavigationMap {
 		addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), ((vertexColumn - 1) % columnNodeNumber));
 	}
 	
-	/**Finds the coordinate vertex that is closest to the passed object
+	/** 
+	 * Finds the coordinate vertex that is closest to the passed object
 	 * 
 	 * @param myObj - Passes an abstract object
 	 * @return Vertex object that is closest to the argument
 	 */
-	public Vertex findNearestVertex(AbstractObject myObj){
+	public NavigationVertex findNearestVertex(AbstractObject myObj){
 		
 		Position objPos = myObj.getPosition();
 		Double xCoord = objPos.getX();
 		Double yCoord = objPos.getY();
 		
 		//Convert to grid space
-		int gridxCoord = (int)Math.round(xCoord / SPACING);
-		int gridyCoord = (int)Math.round(yCoord / SPACING);
+		int gridxCoord = ((int)Math.round(xCoord / SPACING) % rowNodeNumber);
+		int gridyCoord = ((int)Math.round(yCoord / SPACING) % columnNodeNumber);
 		
 		//Create navigation vertex key map
 		NavigationVertexKey nearestKey = new NavigationVertexKey(gridxCoord, gridyCoord);
-		Vertex nearestVert = dataPoints.getVertex(nearestKey);
+		NavigationVertex nearestVert = dataPoints.getVertex(nearestKey).data;
 		
 		return nearestVert;
 	}
