@@ -1,10 +1,8 @@
 package dani6621;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -16,9 +14,7 @@ import spacesettlers.actions.MoveAction;
 import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
 import spacesettlers.clients.TeamClient;
-import spacesettlers.graphics.LineGraphics;
 import spacesettlers.graphics.SpacewarGraphics;
-import spacesettlers.graphics.StarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
@@ -106,7 +102,7 @@ public class ReflexAgent extends TeamClient {
         	 map = new NavigationMap(space, knowledge);
         }
         
-        
+        /*
         Position vertexPosition;
         List<Position> neighborPositions;
         LineGraphics line;
@@ -128,7 +124,7 @@ public class ReflexAgent extends TeamClient {
         		}
         	}
         }
-        
+        */
         
         if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
             AbstractObject source = knowledge.getClosestEnergySource();
@@ -176,6 +172,7 @@ public class ReflexAgent extends TeamClient {
             
             if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
             	findingRandomLocation = false;
+            	
             	newAction = new MoveAction(space, ship.getPosition(),
                         closestAsteroid.getPosition(),
                             (knowledge.calculateInterceptVelocity(closestAsteroid)));
@@ -219,7 +216,6 @@ public class ReflexAgent extends TeamClient {
 
     @Override
     public void shutDown(Toroidal2DPhysics space) {
-        // TODO Auto-generated method stub
 
     }
 
