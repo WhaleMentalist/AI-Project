@@ -1,6 +1,5 @@
 package dani6621;
 
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -25,7 +24,7 @@ public class NavigationMap {
 	/**
 	 * The key that allows access to specified vertex
 	 */
-	private class NavigationVertexKey {
+	public class NavigationVertexKey {
 		
 		/**
 		 * Location of node by row
@@ -113,7 +112,7 @@ public class NavigationMap {
 	/**
 	 * The spacing between each node in the graph
 	 */
-	private static final int SPACING = 100; // Remember: Use 40 when not debugging, 200 for debugging
+	private static final int SPACING = 40; // Remember: Use 40 when not debugging, 200 for debugging
 	
 	/**
 	 * The offset of the connection algorithm
@@ -235,6 +234,16 @@ public class NavigationMap {
 	}
 	
 	/**
+	 * 
+	 * @param v
+	 * @return
+	 */
+	public List<Graph<NavigationVertexKey, NavigationVertex>.Edge> getNeighbors(NavigationVertex v) {
+		NavigationVertexKey key = getNavigationVertexKey(v);
+		return dataPoints.getEdges(key);
+	}
+	
+	/**
 	 * Function will create an edge between two vertices at 
 	 * specified row and column locations. The function will
 	 * find the vertices based on the row and columns passed (i.e
@@ -338,19 +347,6 @@ public class NavigationMap {
 	}
 	
 	/**
-	 * Function will form a path from the ship to object using the graph 
-	 * implementation (i.e the <code>dataPoints</code> data member
-	 * 
-	 * @param ship the ship as an object (i.e initial state)
-	 * @param object the goal object (i.e the goal state)
-	 * @return a <code>List</code> of <code>NavigationVertex</code>
-	 */
-	public List<NavigationVertex> formPath(AbstractObject ship, AbstractObject object) {
-		
-		return null;
-	}
-	
-	/**
 	 * Function will calculate a heuristic value given a random node and the 
 	 * goal node. The time complexity is constant, thereby fulfilling requirement
 	 * of the project. The heuristic is the straight line distance (relatively simple,
@@ -362,7 +358,7 @@ public class NavigationMap {
 	 * @return the value of the heuristic of the <code>node</code> parameter as an integer
 	 * 			quantity
 	 */
-	private int calculateHeuristic(NavigationVertex node, NavigationVertex goalNode) {
+	public int calculateHeuristic(NavigationVertex node, NavigationVertex goalNode) {
 		return (int) Math.ceil(spaceRef.findShortestDistance(node.position, goalNode.position));
 	}
 	
@@ -375,7 +371,7 @@ public class NavigationMap {
 	 * @param end the end location
 	 * @return a weight value corresponding to distance cost between nodes
 	 */
-	private int calculateCost(NavigationVertex start, NavigationVertex end) {
+	public int calculateCost(NavigationVertex start, NavigationVertex end) {
 		NavigationVertexKey startKey = getNavigationVertexKey(start);
 		NavigationVertexKey endKey = getNavigationVertexKey(end);
 		
