@@ -211,8 +211,8 @@ public class WorldState {
             dist = _space.findShortestDistance(shipPos, asteroid.getPosition());
             currentCostEffectiveness = asteroid.getResources().getTotal() / dist; // Cost effectiveness calculation
             if (currentCostEffectiveness > costEffectiveness
-            		&& _space.isPathClearOfObstructions(shipPos, asteroid.getPosition(), getObstacles(), 
-            				_referenceShip.getRadius())) { // Check if asteroid closer to ship and clear of obstructions
+            		/* && _space.isPathClearOfObstructions(shipPos, asteroid.getPosition(), getObstacles(), 
+            				_referenceShip.getRadius()) */) { // Check if asteroid closer to ship and clear of obstructions
                 costEffectiveness = currentCostEffectiveness; // Reassign shortest distance
                 candidate = asteroid;
             }

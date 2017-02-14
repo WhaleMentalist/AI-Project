@@ -1,5 +1,6 @@
 package dani6621;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -187,6 +188,22 @@ public class Graph<K, V> {
 	 */
 	public List<Edge> getEdges(K key) {
 		return graph.get(key).edges;
+	}
+	
+	/**
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public List<Vertex> getNeighborVertices(K key) {
+		List<Edge> edges = getEdges(key);
+		List<Vertex> vertices = new ArrayList<Vertex>(edges.size());
+		
+		for(Edge edge : edges) {
+			vertices.add(edge.endVertex);
+		}
+		
+		return vertices;
 	}
 	
 	/**
