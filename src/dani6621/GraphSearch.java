@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.Stack;
 
 import dani6621.NavigationMap.NavigationVertex;
 import dani6621.NavigationMap.NavigationVertexKey;
@@ -13,10 +14,12 @@ import spacesettlers.objects.AbstractObject;
 /**
  * Class will contain data members such as initial state (node), 
  * goal state (node), and the cost value accumulation. It will
- * implement an inner class called 'AStarNode' that will keep track 
+ * implement an inner class called 'GraphSearchNode' that will keep track 
  * of the parent and the cost to get to the node. This will allow 
  * the implementation of a <code>Comparator</code> for the 
- * <code>PriorityQueue</code> used to search the space.
+ * <code>PriorityQueue</code> used to search the space. The class
+ * will contain graph search methods such as A* to help the AI form
+ * paths.
  * 
  * NOTE: Don't even know if it is logical to create another 
  *       class, but it seems difficult to try to compare 
@@ -25,7 +28,7 @@ import spacesettlers.objects.AbstractObject;
  *       class.
  *
  */
-public class AStar {
+public class GraphSearch {
 	
 	/**
 	 * Custom exception class that will be used in the instance 
@@ -64,13 +67,13 @@ public class AStar {
 	 * for the particular node.
 	 *
 	 */
-	public class AStarNode {
+	public class GraphSearchNode {
 
 		/**
 		 * The parent of the node to help with 
 		 * backtracking
 		 */
-		public AStarNode parent;
+		public GraphSearchNode parent;
 		
 		/**
 		 * Reference to <code>NavigationVertex</code>
@@ -96,7 +99,7 @@ public class AStar {
 		 * 
 		 * @param node
 		 */
-		public AStarNode(NavigationVertex vertex) {
+		public GraphSearchNode(NavigationVertex vertex) {
 			parent = null;
 			node = vertex;
 		}
@@ -124,7 +127,7 @@ public class AStar {
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
-			AStarNode other = (AStarNode) obj;
+			GraphSearchNode other = (GraphSearchNode) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
 			if (node == null) {
@@ -135,20 +138,26 @@ public class AStar {
 			return true;
 		}
 
-		private AStar getOuterType() {
-			return AStar.this;
+		private GraphSearch getOuterType() {
+			return GraphSearch.this;
 		}
 	}
 	
 	/**
+	 * Experimental: Trying to find a depth that is NOT too long, 
+	 * but doesn't tie down the capabilities of the AI
+	 */
+	private static final int MAX_DEPTH = 25;
+	
+	/**
 	 * The initial start of the search
 	 */
-	private AStarNode initialNode;
+	private GraphSearchNode initialNode;
 	
 	/**
 	 * The goal of the search
 	 */
-	private AStarNode goalNode;
+	private GraphSearchNode goalNode;
 	
 	/**
 	 * The graph that will be searched
@@ -163,17 +172,17 @@ public class AStar {
 	 * @param ship the ship object to get location
 	 * @param object the object to get the location
 	 */
-	public AStar(NavigationMap gameMap, AbstractObject ship, AbstractObject object) {
+	public GraphSearch(NavigationMap gameMap, AbstractObject ship, AbstractObject object) {
 		map = gameMap; // Give reference to current game map
 		
 		// Get vertices closest to objects to help initialize search
 		NavigationVertex shipVertex = map.findNearestVertex(ship);
 		NavigationVertex objectVertex = map.findNearestVertex(object);
 		
-		goalNode = new AStarNode(objectVertex);
+		goalNode = new GraphSearchNode(objectVertex);
 		goalNode.hCost = 0;	// Goal node heuristic is zero
 		
-		initialNode = new AStarNode(shipVertex);
+		initialNode = new GraphSearchNode(shipVertex);
 		initialNode.hCost = map.calculateHeuristic(initialNode.node, goalNode.node);
 		initialNode.gCost = 0; // Initial node has 0 step cost
 		initialNode.fCost = initialNode.gCost + initialNode.hCost;
@@ -187,23 +196,27 @@ public class AStar {
 	 * @throws AStarSearchFailureException any instance where the search fails due to
 	 * 										a multitude of reasons
 	 */
-	public AStarNode search() throws AStarSearchFailureException {
-		Set<AStarNode> closed = new HashSet<AStarNode>();
-		PriorityQueue<AStarNode> open = new PriorityQueue<AStarNode>(new Comparator<AStarNode>() {
+	public Stack<GraphSearchNode> aStarSearch() throws AStarSearchFailureException {
+		int depth = 0; // Start at depth zero
+		Set<GraphSearchNode> closed = new HashSet<GraphSearchNode>(); // Create list of explored nodes
+		
+		// Create a priority queue that is sorted by a anonymous class that compares nodes by the 'total cost'
+		PriorityQueue<GraphSearchNode> open = new PriorityQueue<GraphSearchNode>(new Comparator<GraphSearchNode>() {
 
 			@Override
-			public int compare(AStarNode arg0, AStarNode arg1) {
+			public int compare(GraphSearchNode arg0, GraphSearchNode arg1) {
 				return Integer.compare(arg0.fCost, arg1.fCost);
 			}
 		});
 		
+		// Retrieve neighbors through an edge list
 		List<Graph<NavigationVertexKey, NavigationVertex>.Edge> neighbors = map.getNeighbors(initialNode.node);
-		AStarNode newNode;
-		AStarNode nextNode;
+		GraphSearchNode newNode;
+		GraphSearchNode nextNode;
 		
 		// Add children of initial node to frontier
 		for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
-			newNode = new AStarNode(edge.endVertex.data);
+			newNode = new GraphSearchNode(edge.endVertex.data);
 			newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node); // Calculate heuristic
 			newNode.parent = initialNode; // Set parent to initial node
 			newNode.gCost = edge.weight + newNode.parent.gCost; // Add path cost
@@ -211,7 +224,7 @@ public class AStar {
 			open.add(newNode); // Add to queue  
 		}
 		
-		while(true) { // Will need to change for 'Spacewars' 
+		while(depth < MAX_DEPTH) { // Will need to change for 'Spacewars' 
 			if(open.isEmpty()) {
 				throw new AStarSearchFailureException("A* Search Failed! The frontier was empty!");
 			}
@@ -219,7 +232,7 @@ public class AStar {
 			nextNode = open.poll(); // Get head of priority queue
 			
 			if(nextNode.equals(goalNode)) { // If it is a goal node then return solution
-				return nextNode;
+				return generatePath(nextNode);
 			}
 			
 			if(!(closed.contains(nextNode))) { // If closed does not contain the explored node
@@ -227,7 +240,7 @@ public class AStar {
 				neighbors = map.getNeighbors(nextNode.node);
 				
 				for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
-					newNode = new AStarNode(edge.endVertex.data);
+					newNode = new GraphSearchNode(edge.endVertex.data);
 					
 					if(!(closed.contains(newNode)) && 
 							!(open.contains(newNode))) {
@@ -239,7 +252,27 @@ public class AStar {
 					}
 				}
 			}
+			++depth; // Explored a layer, so increase the current depth
 		}
+		throw new AStarSearchFailureException("A* Search Failed! Maximum Depth Reached"); // Means search reached max depth
+	}
+	
+	/**
+	 * Function acts as a helper when search function completes search. It
+	 * will take a given <code>GraphSearchNode</code> (i.e goal node) and retrace
+	 * the path to the initial node
+	 * 
+	 * @param node the starting location (i.e goal)
+	 * @return a path of nodes starting with initial node at top of stack
+	 */
+	private Stack<GraphSearchNode> generatePath(GraphSearchNode node) {
+		Stack<GraphSearchNode> path = new Stack<GraphSearchNode>();
+		GraphSearchNode currentNode = node;
 		
+		while(currentNode.parent != null) {
+			path.push(currentNode);
+			currentNode = currentNode.parent;
+		}
+		return path;
 	}
 }

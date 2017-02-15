@@ -1,13 +1,16 @@
 package dani6621;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.Stack;
 import java.util.UUID;
 
+import dani6621.GraphSearch.GraphSearchNode;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
 import spacesettlers.actions.MoveAction;
@@ -15,6 +18,7 @@ import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
 import spacesettlers.clients.TeamClient;
 import spacesettlers.graphics.SpacewarGraphics;
+import spacesettlers.graphics.StarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
@@ -59,6 +63,11 @@ public class ReflexAgent extends TeamClient {
      * in an effective manner (i.e quickest path and avoid obstacles)
      */
     private NavigationMap map;
+    
+    /**
+     * ------------------------------
+     */
+    private Stack<GraphSearchNode> objective;
     
     /**
      * Graphics to add to help debug the navigation map implementation
@@ -173,6 +182,15 @@ public class ReflexAgent extends TeamClient {
             if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
             	findingRandomLocation = false;
             	
+            	 if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+                 	GraphSearch search = new GraphSearch(map, ship, closestAsteroid);
+                 	objective = search.aStarSearch();
+                 }
+                 
+                 for(GraphSearchNode node : objective) {
+                 	graphicsToAdd.add(new StarGraphics(3,  Color.YELLOW, node.node.position));
+                 }
+            	               
             	newAction = new MoveAction(space, ship.getPosition(),
                         closestAsteroid.getPosition(),
                             (knowledge.calculateInterceptVelocity(closestAsteroid)));
