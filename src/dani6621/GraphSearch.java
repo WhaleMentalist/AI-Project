@@ -1,11 +1,7 @@
 package dani6621;
 
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
+
 
 import dani6621.NavigationMap.NavigationVertex;
 import dani6621.NavigationMap.NavigationVertexKey;
@@ -20,12 +16,6 @@ import spacesettlers.objects.AbstractObject;
  * <code>PriorityQueue</code> used to search the space. The class
  * will contain graph search methods such as A* to help the AI form
  * paths.
- * 
- * NOTE: Don't even know if it is logical to create another 
- *       class, but it seems difficult to try to compare 
- *       <code>NavigationNode</code> itself. It also doesn't 
- *       make a lot of sense to bloat <code>NavigationNode</code>
- *       class.
  *
  */
 public class GraphSearch {
@@ -38,7 +28,7 @@ public class GraphSearch {
 	public class AStarSearchFailureException extends RuntimeException {
 		
 		/**
-		 * 
+		 * Get rid of annoying warninig. Not really useful for any other reasons
 		 */
 		private static final long serialVersionUID = -6242761421647354639L;
 
@@ -147,7 +137,7 @@ public class GraphSearch {
 	 * Experimental: Trying to find a depth that is NOT too long, 
 	 * but doesn't tie down the capabilities of the AI
 	 */
-	private static final int MAX_DEPTH = 25;
+	private static final int MAX_DEPTH = 60;
 	
 	/**
 	 * The initial start of the search
@@ -189,7 +179,8 @@ public class GraphSearch {
 	}
 	
 	/**
-	 * Function will search for a solution (i.e a path) given the data members
+	 * Function will search for a solution (i.e a path) given the data members. Method is
+	 * a bit large, but for the most part readable!
 	 * 
 	 * @return an <code>AStarNode</code> who can be recursively iterated to 
 	 * 			generate a path
@@ -216,7 +207,7 @@ public class GraphSearch {
 		
 		// Add children of initial node to frontier
 		for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
-			newNode = new GraphSearchNode(edge.endVertex.data);
+			newNode = new GraphSearchNode(edge.endVertex.data); // Generate a search node to track costs
 			newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node); // Calculate heuristic
 			newNode.parent = initialNode; // Set parent to initial node
 			newNode.gCost = edge.weight + newNode.parent.gCost; // Add path cost
@@ -224,7 +215,9 @@ public class GraphSearch {
 			open.add(newNode); // Add to queue  
 		}
 		
-		while(depth < MAX_DEPTH) { // Will need to change for 'Spacewars' 
+		while(depth < MAX_DEPTH) { // Implementation specific to 'Spacewars', we don't want to sit and search too long
+			
+			// The explorable is empty! Something weird happened
 			if(open.isEmpty()) {
 				throw new AStarSearchFailureException("A* Search Failed! The frontier was empty!");
 			}
@@ -239,11 +232,13 @@ public class GraphSearch {
 				closed.add(nextNode); // Add explored node to the closed set
 				neighbors = map.getNeighbors(nextNode.node);
 				
+				// Iterate through each neighbor
 				for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
 					newNode = new GraphSearchNode(edge.endVertex.data);
 					
 					if(!(closed.contains(newNode)) && 
 							!(open.contains(newNode))) {
+						// Again... Like up above we need to calculate costs for the algorithm to use
 						newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node);
 						newNode.parent = nextNode;
 						newNode.gCost = edge.weight + newNode.parent.gCost;

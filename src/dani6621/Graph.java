@@ -1,10 +1,6 @@
 package dani6621;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Implementation of graph uses adjacency list
