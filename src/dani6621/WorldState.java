@@ -1,8 +1,6 @@
 package dani6621;
 
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
@@ -40,7 +38,7 @@ public class WorldState {
     /**
      * Helps to avoid agent from chasing asteroid at a slow speed
      */
-    public static final double MIN_VELOCITY_MAGNITUDE = 15.0;
+    public static final double MIN_VELOCITY_MAGNITUDE = 25.0;
 
     /**
      * Delimits if bases is viable to get energy from

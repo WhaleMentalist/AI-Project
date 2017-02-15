@@ -1,7 +1,6 @@
 package dani6621;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
@@ -112,7 +111,7 @@ public class NavigationMap {
 	/**
 	 * The spacing between each node in the graph
 	 */
-	private static final int SPACING = 40; // Remember: Use 40 when not debugging, 200 for debugging
+	public static final int SPACING = 40; // Remember: Use 40 when not debugging, 200 for debugging
 	
 	/**
 	 * The offset of the connection algorithm
@@ -267,7 +266,7 @@ public class NavigationMap {
 				Position startPos = startVertex.position;
 				Position endPos = endVertex.position;
 				
-				if(spaceRef.isPathClearOfObstructions(startPos, endPos, knowledgeRef.getObstacles(), Ship.SHIP_RADIUS)) {
+				if(spaceRef.isPathClearOfObstructions(startPos, endPos, knowledgeRef.getObstacles(), Ship.SHIP_RADIUS * 2)) {
 					dataPoints.addEdge(startKey, endKey, (int) Math.ceil(spaceRef.findShortestDistance(startPos, endPos)));
 				}
 			}

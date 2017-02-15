@@ -1,13 +1,9 @@
 package dani6621;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
+import java.awt.Color;
+import java.util.*;
 
+import dani6621.GraphSearch.GraphSearchNode;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
 import spacesettlers.actions.MoveAction;
@@ -15,6 +11,7 @@ import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
 import spacesettlers.clients.TeamClient;
 import spacesettlers.graphics.SpacewarGraphics;
+import spacesettlers.graphics.StarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
@@ -23,7 +20,6 @@ import spacesettlers.objects.Ship;
 import spacesettlers.objects.powerups.SpaceSettlersPowerupEnum;
 import spacesettlers.objects.resources.ResourcePile;
 import spacesettlers.simulator.Toroidal2DPhysics;
-import spacesettlers.utilities.Position;
 
 /**
  * The agent that will control the ship. It has a function that
@@ -40,7 +36,7 @@ public class ReflexAgent extends TeamClient {
 	/**
 	 * Amount of time to wait before creating a new map
 	 */
-	private static final int NEW_MAP_TIMESTEP = 20;
+	private static final int NEW_MAP_TIMESTEP = 10;
 
     /**
      * Represents how agent will perceive world state. You can
@@ -49,19 +45,15 @@ public class ReflexAgent extends TeamClient {
     private WorldState knowledge;
     
     /**
-     * Boolean flag to check if the ship is going to a random location for better angle
-     * on objects
+     * Holds the current objective of the agent as 
+     * objective changes and the dynamics of the game 
+     * also change
      */
-    private boolean findingRandomLocation;
+    private Navigator navigator;
     
     /**
-     * The abstracted map of the space to help the agent navigate
-     * in an effective manner (i.e quickest path and avoid obstacles)
-     */
-    private NavigationMap map;
-    
-    /**
-     * Graphics to add to help debug the navigation map implementation
+     * Consists of graphics to draw on the game board. Useful for debugging
+     * the navigation.
      */
     private ArrayList<SpacewarGraphics> graphicsToAdd;
 
@@ -93,55 +85,29 @@ public class ReflexAgent extends TeamClient {
      * @return an action for the ship to perform
      */
     public AbstractAction getReflexAgentAction(Toroidal2DPhysics space, Ship ship) {
-        AbstractAction newAction;
-        Position randomLocation;
+        AbstractAction newAction = new DoNothingAction();
         perceive(space, ship);
-        
-        // Generate a new map every set time step to deal with dynamic environment
-        if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-        	 map = new NavigationMap(space, knowledge);
-        }
-        
-        /*
-        Position vertexPosition;
-        List<Position> neighborPositions;
-        LineGraphics line;
-        
-        
-        // Draw nodes of graph and their respective connections
-        for(int i = 0; i < map.rowNodeNumber; ++i) {
-        	for(int j = 0; j < map.columnNodeNumber; ++j) {
-        		vertexPosition = map.getPositionOfVertex(i, j);
-        		graphicsToAdd.add(new StarGraphics(3, Color.RED, vertexPosition));
-        		neighborPositions = map.getNeighborPosition(i, j);
-        		
-        		// Loop through each neighbor position and form a line
-        		for(Position position : neighborPositions) {
-        			line = new LineGraphics(vertexPosition, position, 
-            				space.findShortestDistanceVector(vertexPosition, position));
-            		line.setLineColor(Color.RED);
-            		graphicsToAdd.add(line);
-        		}
-        	}
-        }
-        */
         
         if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
             AbstractObject source = knowledge.getClosestEnergySource();
 
             if(source == null) { // Didn't find a source
-            	if(!(findingRandomLocation)) { // Check if we are going to random location already
-            		findingRandomLocation = true;
-            		randomLocation = space.getRandomFreeLocation(new Random(), ship.getRadius());
-            		newAction = new MoveAction(space, ship.getPosition(), 
-            				randomLocation, knowledge.calculateVelocity(randomLocation));
-            	}
-            	else { // If we are going to random location just continue on unless we find something
-            		newAction = ship.getCurrentAction();
-            	}
+            	newAction = new DoNothingAction(); // Prevent ship from killing self
             }
             else { // Otherwise go to the energy source
-            	findingRandomLocation = false;
+            	
+            	 // Replan route
+            	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+            		navigator.generatePath(space, knowledge, ship, source);
+                }
+            	
+            	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
+            	
+            	// Draw path on screen for debugging
+            	for(GraphSearchNode node : navigator.getCopyPath()) {
+            		graphicsToAdd.add(new StarGraphics(2, Color.YELLOW, node.node.position));
+            	}
+
             	newAction = new MoveAction(space, ship.getPosition(), source.getPosition(),
             			knowledge.calculateInterceptVelocity(source));
             }
@@ -150,20 +116,19 @@ public class ReflexAgent extends TeamClient {
             Base closestBase = knowledge.getClosestFriendlyBase();
             
             if(closestBase != null) { // Goto base that was found
-            	findingRandomLocation = false;
-                newAction = new MoveAction(space, ship.getPosition(), closestBase.getPosition(),
-                                            (knowledge.calculateInterceptVelocity(closestBase)));
-            }
-            else { // We can't find the base that is clear
-            	if(!(findingRandomLocation)) { // Check if we are going to random location already
-            		findingRandomLocation = true;
-            		randomLocation = space.getRandomFreeLocation(new Random(), ship.getRadius());
-            		newAction = new MoveAction(space, ship.getPosition(), 
-            				randomLocation, knowledge.calculateVelocity(randomLocation));
+            	
+            	 // Replan route
+            	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+            		navigator.generatePath(space, knowledge, ship, closestBase);
+                }
+            	
+            	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
+            	
+            	// Draw path on screen for debugging
+            	for(GraphSearchNode node : navigator.getCopyPath()) {
+            		graphicsToAdd.add(new StarGraphics(2, Color.YELLOW, node.node.position));
             	}
-            	else { // If we are going to random location just continue on unless we find something
-            		newAction = ship.getCurrentAction();
-            	}
+
             }
         }
         else { // Perform asteroid mining
@@ -171,22 +136,19 @@ public class ReflexAgent extends TeamClient {
             Asteroid closestAsteroid = knowledge.getMostEfficientMinableAsteroid();
             
             if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
-            	findingRandomLocation = false;
             	
-            	newAction = new MoveAction(space, ship.getPosition(),
-                        closestAsteroid.getPosition(),
-                            (knowledge.calculateInterceptVelocity(closestAsteroid)));
-            }
-            else { // We couldn't find an asteroid, so move to a random location that is clear
-            	if(!(findingRandomLocation)) { // Check if we are going to random location already
-            		findingRandomLocation = true;
-            		randomLocation = space.getRandomFreeLocation(new Random(), ship.getRadius());
-            		newAction = new MoveAction(space, ship.getPosition(), 
-            				randomLocation, knowledge.calculateVelocity(randomLocation));
+            	 // Replan route
+            	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+            		navigator.generatePath(space, knowledge, ship, closestAsteroid);
+                }
+                
+            	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
+            	
+            	// Draw path on screen for debugging
+            	for(GraphSearchNode node : navigator.getCopyPath()) {
+            		graphicsToAdd.add(new StarGraphics(2, Color.YELLOW, node.node.position));
             	}
-            	else { // If we are going to random location just continue on unless we find something
-            		newAction = ship.getCurrentAction();
-            	}
+            	
             }
         }
 
@@ -210,13 +172,12 @@ public class ReflexAgent extends TeamClient {
 
     @Override
     public void initialize(Toroidal2DPhysics space) {
-    	findingRandomLocation = false;
+    	navigator = new Navigator();
     	graphicsToAdd = new ArrayList<SpacewarGraphics>();
     }
 
     @Override
     public void shutDown(Toroidal2DPhysics space) {
-        // TODO Auto-generated method stub
 
     }
 
