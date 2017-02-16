@@ -228,7 +228,7 @@ public class GraphSearch {
 				return generatePath(nextNode);
 			}
 			
-			if(!(closed.contains(nextNode))) { // If closed does not contain the explored node
+			if(!(closed.contains(nextNode)) && !(map.isCloseToObstacle(nextNode.node))) { // If closed does not contain the explored node
 				closed.add(nextNode); // Add explored node to the closed set
 				neighbors = map.getNeighbors(nextNode.node);
 				

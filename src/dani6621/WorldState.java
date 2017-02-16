@@ -10,7 +10,6 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
 import spacesettlers.utilities.Vector2D;
 
-//poop
 /**
  * Essentially the knowledge representation of the agent. It will 
  * store some useful constants to delimit key states and it also has 
@@ -33,12 +32,12 @@ public class WorldState {
      * If a maximum velocity is imposed the agent has better
      * control
      */
-    public static final double MAX_VELOCITY_MAGNITUDE = 40.0;
+    public static final double MAX_VELOCITY_MAGNITUDE = 60.0;
 
     /**
      * Helps to avoid agent from chasing asteroid at a slow speed
      */
-    public static final double MIN_VELOCITY_MAGNITUDE = 25.0;
+    public static final double MIN_VELOCITY_MAGNITUDE = 40.0;
 
     /**
      * Delimits if bases is viable to get energy from
@@ -177,7 +176,24 @@ public class WorldState {
         obstacles.addAll(getShips());
         return obstacles;
     }
-
+    
+    /*
+    public Set<AbstractObject> getObstaclesFuture() {
+    	Set<AbstractObject> obstacles = new HashSet<AbstractObject>();
+    	Position futurePosition;
+    	Position currentPosition;
+    	
+    	for(AbstractObject asteroid : getUnmineableAsteroids()) {
+    		
+    		if(asteroid.isMoveable()) {
+    			currentPosition = asteroid.getPosition();
+    			// futurePosition = currentPosition.setX(x);
+    			// obstacles.add();
+    		}
+    	}
+    }
+	*/
+    
     /**
      * This will generate a list of obstacles with the
      * exception of team bases

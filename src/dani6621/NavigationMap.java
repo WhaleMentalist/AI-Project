@@ -111,7 +111,12 @@ public class NavigationMap {
 	/**
 	 * The spacing between each node in the graph
 	 */
-	public static final int SPACING = 40; // Remember: Use 40 when not debugging, 200 for debugging
+	public static final int SPACING = 40;
+	
+	/**
+	 * Determines if vertex is close to obstacle
+	 */
+	private static final int CLOSE_DISTANCE = Ship.SHIP_RADIUS * 4;
 	
 	/**
 	 * The offset of the connection algorithm
@@ -186,6 +191,7 @@ public class NavigationMap {
 				nodePosition = new Position((double) i * SPACING, (double) j * SPACING);
 				vertex = new NavigationVertex(nodePosition);
 				key = new NavigationVertexKey(i, j);
+				
 				dataPoints.addVertex(key, vertex);
 			}
 		}
@@ -266,7 +272,7 @@ public class NavigationMap {
 				Position startPos = startVertex.position;
 				Position endPos = endVertex.position;
 				
-				if(spaceRef.isPathClearOfObstructions(startPos, endPos, knowledgeRef.getObstacles(), Ship.SHIP_RADIUS * 2)) {
+				if(spaceRef.isPathClearOfObstructions(startPos, endPos, knowledgeRef.getObstacles(), Ship.SHIP_RADIUS * 4)) {
 					dataPoints.addEdge(startKey, endKey, (int) Math.ceil(spaceRef.findShortestDistance(startPos, endPos)));
 				}
 			}
@@ -346,6 +352,25 @@ public class NavigationMap {
 	}
 	
 	/**
+	 * 
+	 * @param v
+	 * @return
+	 */
+	public boolean isCloseToObstacle(NavigationVertex v) {
+		Set<AbstractObject> obstacles = knowledgeRef.getObstacles();
+		int candidate;
+		
+		for(AbstractObject obj : obstacles) {
+			candidate = (int) spaceRef.findShortestDistance(v.position, obj.getPosition());
+			if(candidate < CLOSE_DISTANCE) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	/**
 	 * Function will calculate a heuristic value given a random node and the 
 	 * goal node. The time complexity is constant, thereby fulfilling requirement
 	 * of the project. The heuristic is the straight line distance (relatively simple,
@@ -376,6 +401,4 @@ public class NavigationMap {
 		
 		return dataPoints.getWeight(startKey, endKey);
 	}
-	
-	
  }
