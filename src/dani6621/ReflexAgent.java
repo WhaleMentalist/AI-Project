@@ -137,13 +137,9 @@ public class ReflexAgent extends TeamClient {
             
             if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
             	
-<<<<<<< HEAD
+
             	// Replan route
-            	if((space.getCurrentTimestep() % NEW_MAP_TIMESTEP) == 0) {
-=======
-            	 // Replan route
             	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
->>>>>>> refs/remotes/origin/greg2
             		navigator.generateAStarPath(space, knowledge, ship, closestAsteroid);
                 }
                 

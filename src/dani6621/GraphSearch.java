@@ -180,7 +180,7 @@ public class GraphSearch {
 	
 	/**
 	 * Function will search for a solution (i.e a path) given the data members. Method is
-	 * a bit large, but for the most part readable!
+	 * a bit large, but for the most part readable! It uses f(n) = g(n) + h(n)
 	 * 
 	 * @return an <code>AStarNode</code> who can be recursively iterated to 
 	 * 			generate a path
