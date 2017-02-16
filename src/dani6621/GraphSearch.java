@@ -25,7 +25,7 @@ public class GraphSearch {
 	 * the search fails (however rarely)
 	 *
 	 */
-	public class AStarSearchFailureException extends RuntimeException {
+	public class SearchFailureException extends RuntimeException {
 		
 		/**
 		 * Get rid of annoying warninig. Not really useful for any other reasons
@@ -35,7 +35,7 @@ public class GraphSearch {
 		/**
 		 * Blank constructor that will use default message
 		 */
-		public AStarSearchFailureException() {
+		public SearchFailureException() {
 			super();
 		}
 		
@@ -44,7 +44,7 @@ public class GraphSearch {
 		 * 
 		 * @param msg the message of the exception
 		 */
-		public AStarSearchFailureException(String msg) {
+		public SearchFailureException(String msg) {
 			super(msg);
 		}
 		
@@ -184,10 +184,10 @@ public class GraphSearch {
 	 * 
 	 * @return an <code>AStarNode</code> who can be recursively iterated to 
 	 * 			generate a path
-	 * @throws AStarSearchFailureException any instance where the search fails due to
+	 * @throws SearchFailureException any instance where the search fails due to
 	 * 										a multitude of reasons
 	 */
-	public Stack<GraphSearchNode> aStarSearch() throws AStarSearchFailureException {
+	public Stack<GraphSearchNode> aStarSearch() throws SearchFailureException {
 		int depth = 0; // Start at depth zero
 		Set<GraphSearchNode> closed = new HashSet<GraphSearchNode>(); // Create list of explored nodes
 		
@@ -219,7 +219,7 @@ public class GraphSearch {
 			
 			// The explorable is empty! Something weird happened
 			if(open.isEmpty()) {
-				throw new AStarSearchFailureException("A* Search Failed! The frontier was empty!");
+				throw new SearchFailureException("A* Search Failed! The frontier was empty!");
 			}
 			
 			nextNode = open.poll(); // Get head of priority queue
@@ -249,7 +249,81 @@ public class GraphSearch {
 			}
 			++depth; // Explored a layer, so increase the current depth
 		}
-		throw new AStarSearchFailureException("A* Search Failed! Maximum Depth Reached"); // Means search reached max depth
+		throw new SearchFailureException("A* Search Failed! Maximum Depth Reached"); // Means search reached max depth
+	}
+	
+	
+	/**
+	 * Function will search for a solution (i.e a path) given the data members. Method is
+	 * a bit large, but for the most part readable!
+	 * 
+	 * @return a Stack of GraphSearchNode which can generate a path
+	 * @throws SearchFailureException any instance where the search fails due to
+	 * 										a multitude of reasons
+	 */
+	public Stack<GraphSearchNode> greedyBFSearch() throws SearchFailureException {
+		int depth = 0; // Start at depth zero
+		Set<GraphSearchNode> closed = new HashSet<GraphSearchNode>(); // Create list of explored nodes
+		
+		// Create a priority queue that is sorted by a anonymous class that compares nodes by the 'total cost'
+		PriorityQueue<GraphSearchNode> open = new PriorityQueue<GraphSearchNode>(new Comparator<GraphSearchNode>() {
+
+			@Override
+			public int compare(GraphSearchNode arg0, GraphSearchNode arg1) {
+				return Integer.compare(arg0.fCost, arg1.fCost);
+			}
+		});
+		
+		// Retrieve neighbors through an edge list
+		List<Graph<NavigationVertexKey, NavigationVertex>.Edge> neighbors = map.getNeighbors(initialNode.node);
+		GraphSearchNode newNode;
+		GraphSearchNode nextNode;
+		
+		// Add children of initial node to frontier
+		for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
+			newNode = new GraphSearchNode(edge.endVertex.data); // Generate a search node to track costs
+			newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node); // Calculate heuristic
+			newNode.parent = initialNode; // Set parent to initial node
+			newNode.gCost = edge.weight + newNode.parent.gCost; // Add path cost
+			newNode.fCost = newNode.gCost + newNode.hCost; // Calculate total cost
+			open.add(newNode); // Add to queue  
+		}
+		
+		while(depth < MAX_DEPTH) { // Implementation specific to 'Spacewars', we don't want to sit and search too long
+			
+			// The explorable is empty! Something weird happened
+			if(open.isEmpty()) {
+				throw new SearchFailureException("A* Search Failed! The frontier was empty!");
+			}
+			
+			nextNode = open.poll(); // Get head of priority queue
+			
+			if(nextNode.equals(goalNode)) { // If it is a goal node then return solution
+				return generatePath(nextNode);
+			}
+			
+			if(!(closed.contains(nextNode))) { // If closed does not contain the explored node
+				closed.add(nextNode); // Add explored node to the closed set
+				neighbors = map.getNeighbors(nextNode.node);
+				
+				// Iterate through each neighbor
+				for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
+					newNode = new GraphSearchNode(edge.endVertex.data);
+					
+					if(!(closed.contains(newNode)) && 
+							!(open.contains(newNode))) {
+						// Again... Like up above we need to calculate costs for the algorithm to use
+						newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node);
+						newNode.parent = nextNode;
+						newNode.gCost = edge.weight + newNode.parent.gCost;
+						newNode.fCost = newNode.hCost;  //Greedy Best First uses h(x) for f(x)
+						open.add(newNode);
+					}
+				}
+			}
+			++depth; // Explored a layer, so increase the current depth
+		}
+		throw new SearchFailureException("Greedy Best First Search Failed! Maximum Depth Reached"); // Means search reached max depth
 	}
 	
 	/**
