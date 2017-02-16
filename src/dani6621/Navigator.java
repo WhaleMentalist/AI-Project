@@ -99,7 +99,7 @@ public class Navigator {
 	 * @param ship the ship that is transversing the path
 	 * @param goal the goal the ship needs to reach
 	 */
-	public void generatePath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, AbstractObject goal) {
+	public void generateAStarPath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, AbstractObject goal) {
 		currentTargetNode = null;
 		map = new NavigationMap(space, knowledge); // Generate graph for problem
 		goalObject = goal;
