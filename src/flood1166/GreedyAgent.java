@@ -1,7 +1,10 @@
-package dani6621;
+package flood1166;
+
 
 import java.awt.Color;
 import java.util.*;
+
+import dani6621.*;
 
 import dani6621.GraphSearch.GraphSearchNode;
 import spacesettlers.actions.AbstractAction;
@@ -26,7 +29,7 @@ import spacesettlers.simulator.Toroidal2DPhysics;
  * will select the action the agent performs based on contents of
  * <code>WorldState</code> reference data member
  */
-public class ReflexAgent extends TeamClient {
+public class GreedyAgent extends TeamClient {
 	
 	/**
 	 * Constant will delimit whether agent can build a base
@@ -98,7 +101,7 @@ public class ReflexAgent extends TeamClient {
             	
             	 // Replan route
             	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-            		navigator.generateAStarPath(space, knowledge, ship, source);
+            		navigator.generateGreedyBFPath(space, knowledge, ship, source);
                 }
             	
             	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
@@ -119,7 +122,7 @@ public class ReflexAgent extends TeamClient {
             	
             	 // Replan route
             	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-            		navigator.generateAStarPath(space, knowledge, ship, closestBase);
+            		navigator.generateGreedyBFPath(space, knowledge, ship, closestBase);
                 }
             	
             	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
@@ -139,7 +142,7 @@ public class ReflexAgent extends TeamClient {
             	
             	 // Replan route
             	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-            		navigator.generateAStarPath(space, knowledge, ship, closestAsteroid);
+            		navigator.generateGreedyBFPath(space, knowledge, ship, closestAsteroid);
                 }
                 
             	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);

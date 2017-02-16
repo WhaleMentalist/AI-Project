@@ -99,7 +99,7 @@ public class Navigator {
 	 * @param ship the ship that is transversing the path
 	 * @param goal the goal the ship needs to reach
 	 */
-	public void generatePath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, AbstractObject goal) {
+	public void generateAStarPath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, AbstractObject goal) {
 		currentTargetNode = null;
 		map = new NavigationMap(space, knowledge); // Generate graph for problem
 		goalObject = goal;
@@ -108,8 +108,33 @@ public class Navigator {
 		try {
 			path = graphSearch.aStarSearch(); // Generate a path
 		}
-		catch(GraphSearch.AStarSearchFailureException e) {
-			System.out.println(e.getMessage());
+		catch(GraphSearch.SearchFailureException e) {
+			//System.out.println(e.getMessage());
+			path = new Stack<GraphSearchNode>(); // Generate an empty stack
+		}
+	}
+	
+	/**
+	 * Function will generate a path to the objective using a 
+	 * <code>GraphSearch</code> object that can employ graph search
+	 * algorithms.  This particular search is greedy best first search
+	 * 
+	 * @param space the reference to game space used for utility functions
+	 * @param knowledge the reference to knowledge representation used for utility functions
+	 * @param ship the ship that is transversing the path
+	 * @param goal the goal the ship needs to reach
+	 */
+	public void generateGreedyBFPath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, AbstractObject goal) {
+		currentTargetNode = null;
+		map = new NavigationMap(space, knowledge); // Generate graph for problem
+		goalObject = goal;
+		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
+		
+		try {
+			path = graphSearch.greedyBFSearch(); // Generate a path
+		}
+		catch(GraphSearch.SearchFailureException e) {
+			//System.out.println(e.getMessage());
 			path = new Stack<GraphSearchNode>(); // Generate an empty stack
 		}
 	}
