@@ -91,7 +91,7 @@ public class Navigator {
 	
 	/**
 	 * Function will generate a path to the objective using a 
-	 * <code>GraphSearch</code> object that can employ graph search
+	 * <code>GraphSearch</code> function that implements 'A*' search
 	 * algorithms.
 	 * 
 	 * @param space the reference to game space used for utility functions
