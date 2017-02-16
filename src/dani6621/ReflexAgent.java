@@ -36,7 +36,7 @@ public class ReflexAgent extends TeamClient {
 	/**
 	 * Amount of time to wait before creating a new map
 	 */
-	private static final int NEW_MAP_TIMESTEP = 10;
+	private static final int NEW_MAP_TIMESTEP = 15;
 
     /**
      * Represents how agent will perceive world state. You can
@@ -137,8 +137,8 @@ public class ReflexAgent extends TeamClient {
             
             if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
             	
-            	 // Replan route
-            	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+            	// Replan route
+            	if((space.getCurrentTimestep() % NEW_MAP_TIMESTEP) == 0) {
             		navigator.generatePath(space, knowledge, ship, closestAsteroid);
                 }
                 

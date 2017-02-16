@@ -36,7 +36,7 @@ public class Navigator {
 	private GraphSearchNode currentTargetNode;
 	
 	/**
-	 * The goal stores as an <AbstractObject</code>. This
+	 * The goal stores as an <code>AbstractObject</code>. This
 	 * is useful when object is moving and ship needs to
 	 * intercept it.
 	 */
@@ -74,7 +74,7 @@ public class Navigator {
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
 						knowledge.calculateVelocity(currentTargetNode.node.position));
 			}
-			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < NavigationMap.SPACING) {
+			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 2)) {
 				currentTargetNode = path.pop();
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
 						knowledge.calculateVelocity(currentTargetNode.node.position));
