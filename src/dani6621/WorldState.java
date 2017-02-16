@@ -224,9 +224,7 @@ public class WorldState {
         for (Asteroid asteroid : getMineableAsteroids()) {
             dist = _space.findShortestDistance(shipPos, asteroid.getPosition());
             currentCostEffectiveness = asteroid.getResources().getTotal() / dist; // Cost effectiveness calculation
-            if (currentCostEffectiveness > costEffectiveness
-            		/* && _space.isPathClearOfObstructions(shipPos, asteroid.getPosition(), getObstacles(), 
-            				_referenceShip.getRadius()) */) { // Check if asteroid closer to ship and clear of obstructions
+            if (currentCostEffectiveness > costEffectiveness) { // Check if asteroid closer to ship and clear of obstructions
                 costEffectiveness = currentCostEffectiveness; // Reassign shortest distance
                 candidate = asteroid;
             }
@@ -246,9 +244,7 @@ public class WorldState {
         Position shipPos = _referenceShip.getPosition();
         for (Base base : getTeamBases()) { // Go through team bases
             dist = _space.findShortestDistance(shipPos, base.getPosition());
-            if (dist < shortestDist &&
-            		_space.isPathClearOfObstructions(shipPos, base.getPosition(), getObstaclesExceptTeamBase(), 
-            				_referenceShip.getRadius())) { // Check if the best candidate is beaten
+            if (dist < shortestDist) { // Check if the best candidate is beaten
                 shortestDist = dist;
                 candidate = base;
             }
@@ -303,9 +299,7 @@ public class WorldState {
             }
 
             // Otherwise see if it is closer
-            if (dist < shortestDist && 
-            	_space.isPathClearOfObstructions(shipPos, energySource.getPosition(), getObstaclesExceptTeamBase(), 
-            			_referenceShip.getRadius())) {
+            if (dist < shortestDist) {
                 shortestDist = dist; // Reassign shortest distance
                 candidate = energySource;
             }
@@ -385,154 +379,5 @@ public class WorldState {
         }
 
         return finalVelocity;
-    }
-    
-    /**
-     * Function will return a vector that will tug ship away from obstacle. It will calculate
-     * the future position of ship and generate a line for collision checking. The vector will be
-     * in the direction of the closest point subtracted from the collision object position. The vector
-     * will be scaled to help actually apply a significant force.
-     * 
-     * @return
-     */
-    public Vector2D collisionAvoidance() {
-    	Position initialShipPos = _referenceShip.getPosition();
-    	Position predictedShipPos = 
-    		new Position(initialShipPos.getX() + 
-    				initialShipPos.getTranslationalVelocityX() * _space.getTimestep() * MAX_LOOK_AHEAD,
-    		initialShipPos.getY() + 
-    		initialShipPos.getTranslationalVelocityY() * _space.getTimestep() * MAX_LOOK_AHEAD);
-    	double shipVelocityMagnitude = _referenceShip.getPosition().getTotalTranslationalVelocity();
-    	Vector2D avoidanceVector = new Vector2D(0.0, 0.0);
-    	Vector2D closest;
-    	
-    	AbstractObject threat = findFutureCollision(initialShipPos, predictedShipPos);
-    	
-    	if(threat != null) {
-    		double distance = _space.findShortestDistance(initialShipPos, threat.getPosition());
-    		closest = new Vector2D(calculateClosest(initialShipPos, predictedShipPos, threat.getPosition()));
-    		avoidanceVector = (closest.subtract(new Vector2D(threat.getPosition()))).getUnitVector();
-    		System.out.println(avoidanceVector.toString());
-    		// Respond to collision more strongly as distance shortens and speed increases
-    		avoidanceVector = avoidanceVector.
-    				multiply(15.0 * (shipVelocityMagnitude / 
-    				(distance * distance) * _referenceShip.getMass()));
-    	}
-    	else {
-    		avoidanceVector.multiply(0.0);
-    	}
-    	return avoidanceVector;
-    	
-    }
-    
-    /**
-     * Function will find future collision by iterating through each object. The closest
-     * object is chosen as it is the MOST imminent threat.
-     * 
-     * @param initialPosition the initial position of ship
-     * @param finalPosition the final position of ship after timestep (assuming constant velocity)
-     * @return an object that will collide with the ship (this can be null)
-     */
-    public AbstractObject findFutureCollision(Position initialPosition, Position finalPosition) {
-    	AbstractObject collisionObject = null;
-    	Position collisionObjectPosition;
-    	Position objectPosition;
-    	boolean isCollision = false;
-    	
-    	for(AbstractObject object : getObstaclesExceptTeamBase()) {
-    		
-    		objectPosition = object.getPosition();
-    		
-    		if(object.isMoveable()) {
-    			objectPosition.setX(objectPosition.getX() + objectPosition.getTranslationalVelocityX());
-    			objectPosition.setY(objectPosition.getY() + objectPosition.getTranslationalVelocityY());
-    		}
-    		
-    		isCollision = lineInterectCircle(_referenceShip.getPosition(), finalPosition, objectPosition,
-    						object.getRadius());
-    		
-    		if(isCollision && (collisionObject == null || 
-    				(_space.findShortestDistance(initialPosition, objectPosition) < 
-    				_space.findShortestDistance(initialPosition, collisionObject.getPosition())))) {
-    			collisionObject = object;
-    			collisionObjectPosition = collisionObject.getPosition();
-    			
-        		if(collisionObject != null) {
-        			if(collisionObject.isMoveable()) {
-        				collisionObjectPosition.setX(collisionObjectPosition.getX() + 
-        						collisionObjectPosition.getTranslationalVelocityX());
-        				collisionObjectPosition.setY(collisionObjectPosition.getY() + 
-        						collisionObjectPosition.getTranslationalVelocityY());
-            		}
-        		}
-    		}
-    	}
-    	
-    	return collisionObject;
-    }
-    
-    /**
-     * Check if line intersects a circle
-     * 
-     * @param initialShipPos initial location of ship
-     * @param predictedShipPos future location of ship
-     * @param objectPos the position of the object we are checking
-     * @param objectRadius the radius of the object we are checking
-     * @return a boolean of the result of the check (true for intersect and false for no intersect)
-     */
-    private boolean lineInterectCircle(Position initialShipPos, Position predictedShipPos, 
-    									Position objectPos, double objectRadius) {
-    	
-    	Position closest = calculateClosest(initialShipPos, predictedShipPos, objectPos);
-    	Vector2D distance = _space.findShortestDistanceVector(closest, objectPos);
-    	
-    	return (distance.getMagnitude() < 1.5 * (objectRadius + _referenceShip.getRadius()));
-    }
-    
-    /**
-     * Calculates the closest point on line to the object
-     * 
-     * @param initialShipPos the initial location of ship
-     * @param predictedShipPos the future location of ship
-     * @param objectPos the location of the object
-     * @return a <code>Position</code> object holding the location of the closest point to object 
-     */
-    private Position calculateClosest(Position initialShipPos, Position predictedShipPos,
-    									Position objectPos) {
-    	Vector2D aheadSegment = _space.findShortestDistanceVector(initialShipPos, predictedShipPos);
-    	Vector2D shipToObjectSegment = _space.findShortestDistanceVector(initialShipPos, objectPos);
-    	Vector2D projection = shipToObjectSegment.vectorProject(aheadSegment);
-    	Position closest;
-    	
-    	// Need to check couple of cases
-    	if(projection.getMagnitude() < 0.0) { // Set closest to the beginning of segment
-    		closest = initialShipPos;
-    	}
-    	else if(projection.getMagnitude() > aheadSegment.getMagnitude()){ // Set closest to the end of segment
-    		closest = new Position(aheadSegment); 
-    	}
-    	else {
-    		// Otherwise closest is the initial spot summed with the projection vector
-        	closest = new Position(new Vector2D(initialShipPos).add(projection));
-    	}
-    	
-    	return closest;
-    }
-    
-    /**
-     * Function will generate a free location that is free of obstructions
-     * 
-     * @return	a position that is obstruction free
-     */
-    public Position getRandomObstructionFreeLocation() {
-    	Position randomSpot;
-    	
-    	randomSpot = _space.getRandomFreeLocation(new Random(), _referenceShip.getRadius());
-    	
-    	while(!(_space.isPathClearOfObstructions(_referenceShip.getPosition(), randomSpot, getObstacles(), 
-    			_referenceShip.getRadius()))) {
-    		randomSpot = _space.getRandomFreeLocation(new Random(), _referenceShip.getRadius());
-    	}
-    	return randomSpot;
     }
 }

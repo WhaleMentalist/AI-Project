@@ -98,7 +98,7 @@ public class ReflexAgent extends TeamClient {
             	
             	 // Replan route
             	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-            		navigator.generatePath(space, knowledge, ship, source);
+            		navigator.generateAStarPath(space, knowledge, ship, source);
                 }
             	
             	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
@@ -119,7 +119,7 @@ public class ReflexAgent extends TeamClient {
             	
             	 // Replan route
             	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-            		navigator.generatePath(space, knowledge, ship, closestBase);
+            		navigator.generateAStarPath(space, knowledge, ship, closestBase);
                 }
             	
             	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
@@ -139,7 +139,7 @@ public class ReflexAgent extends TeamClient {
             	
             	// Replan route
             	if((space.getCurrentTimestep() % NEW_MAP_TIMESTEP) == 0) {
-            		navigator.generatePath(space, knowledge, ship, closestAsteroid);
+            		navigator.generateAStarPath(space, knowledge, ship, closestAsteroid);
                 }
                 
             	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
@@ -164,23 +164,35 @@ public class ReflexAgent extends TeamClient {
     private void perceive(Toroidal2DPhysics space, Ship ship) {
         knowledge = new WorldState(space, ship);
     }
-
+    
+    /**
+     * 
+     */
     @Override
     public void getMovementEnd(Toroidal2DPhysics space, Set<AbstractActionableObject> actionableObjects) {
     	
     }
-
+    
+    /**
+     * 
+     */
     @Override
     public void initialize(Toroidal2DPhysics space) {
     	navigator = new Navigator();
     	graphicsToAdd = new ArrayList<SpacewarGraphics>();
     }
-
+    
+    /**
+     * 
+     */
     @Override
     public void shutDown(Toroidal2DPhysics space) {
 
     }
-
+    
+    /**
+     * 
+     */
     @Override
     public Set<SpacewarGraphics> getGraphics() {
     	HashSet<SpacewarGraphics> graphics = new HashSet<SpacewarGraphics>();
