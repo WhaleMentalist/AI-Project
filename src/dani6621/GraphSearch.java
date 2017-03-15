@@ -86,8 +86,9 @@ public class GraphSearch {
 		public int hCost;
 		
 		/**
+		 * Initialize object with vertex
 		 * 
-		 * @param node
+		 * @param vertex the vertex to set in the object
 		 */
 		public GraphSearchNode(NavigationVertex vertex) {
 			parent = null;
@@ -137,7 +138,7 @@ public class GraphSearch {
 	 * Experimental: Trying to find a depth that is NOT too long, 
 	 * but doesn't tie down the capabilities of the AI
 	 */
-	private static final int MAX_DEPTH = 60;
+	private static final int MAX_DEPTH = 80;
 	
 	/**
 	 * The initial start of the search
@@ -182,18 +183,18 @@ public class GraphSearch {
 	 * Function will search for a solution (i.e a path) given the data members. Method is
 	 * a bit large, but for the most part readable! It uses f(n) = g(n) + h(n)
 	 * 
+	 * @param obstacles the obstacles the search should avoid
 	 * @return an <code>AStarNode</code> who can be recursively iterated to 
 	 * 			generate a path
 	 * @throws SearchFailureException any instance where the search fails due to
 	 * 										a multitude of reasons
 	 */
-	public Stack<GraphSearchNode> aStarSearch() throws SearchFailureException {
+	public Stack<GraphSearchNode> aStarSearch(Set<AbstractObject> obstacles) throws SearchFailureException {
 		int depth = 0; // Start at depth zero
 		Set<GraphSearchNode> closed = new HashSet<GraphSearchNode>(); // Create list of explored nodes
 		
 		// Create a priority queue that is sorted by a anonymous class that compares nodes by the 'total cost'
 		PriorityQueue<GraphSearchNode> open = new PriorityQueue<GraphSearchNode>(new Comparator<GraphSearchNode>() {
-
 			@Override
 			public int compare(GraphSearchNode arg0, GraphSearchNode arg1) {
 				return Integer.compare(arg0.fCost, arg1.fCost);

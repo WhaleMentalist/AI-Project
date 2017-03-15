@@ -116,7 +116,7 @@ public class NavigationMap {
 	/**
 	 * Determines if vertex is close to obstacle
 	 */
-	private static final int CLOSE_DISTANCE = Ship.SHIP_RADIUS * 4;
+	private static final int CLOSE_DISTANCE = Ship.SHIP_RADIUS * 3;
 	
 	/**
 	 * The offset of the connection algorithm
@@ -235,6 +235,7 @@ public class NavigationMap {
 		for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : edges) {
 			positions.add(Graph.HEAD, edge.endVertex.data.position);
 		}
+		
 		return positions;
 	}
 	
@@ -280,9 +281,10 @@ public class NavigationMap {
 	}	
 	
 	/**
+	 * This function will create connections to the vertex
 	 * 
-	 * @param key
-	 * @param vertex
+	 * @param key the key of the vertex to form connections
+	 * @param vertex the actual vertex object to add connections to
 	 */
 	private void formConnections(NavigationVertexKey key, NavigationVertex vertex) {
 		int vertexRow = key.vertexRowNumber;
@@ -296,17 +298,20 @@ public class NavigationMap {
 				}
 				else {
 					// Use modulus to perform wrap around, as this is a torus space
-					addConnection(vertexRow, vertexColumn, (i % (rowNodeNumber)), (j % (columnNodeNumber))); // Create a connection
+					addConnection(vertexRow, vertexColumn, (i % (rowNodeNumber)), 
+							(j % (columnNodeNumber))); // Create a connection
 				}
 			}
 		}
 		
 		// Edge case: When the specified column is zero, we need to connect both diagonal up and diagonal down (Torus space)
 		if(vertexColumn == 0) {
-			addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), (columnNodeNumber - 1));
+			addConnection(vertexRow, vertexColumn, 
+					((vertexRow + 1) % rowNodeNumber), (columnNodeNumber - 1));
 		}
 		
-		addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), ((vertexColumn - 1) % columnNodeNumber));
+		addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), 
+				((vertexColumn - 1) % columnNodeNumber));
 	}
 	
 	/** 
@@ -352,9 +357,11 @@ public class NavigationMap {
 	}
 	
 	/**
+	 * Function returns a <code>boolean</code> if object is too
+	 * close to particular vertex
 	 * 
-	 * @param v
-	 * @return
+	 * @param v the vertex to test
+	 * @return the result
 	 */
 	public boolean isCloseToObstacle(NavigationVertex v) {
 		Set<AbstractObject> obstacles = knowledgeRef.getObstacles();
