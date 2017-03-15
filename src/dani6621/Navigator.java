@@ -20,6 +20,11 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 public class Navigator {
 	
 	/**
+	 * The minimal path needed to pursue object
+	 */
+	private static final int MINIMAL_PATH = 3;
+	
+	/**
 	 * Abstraction of the navigation problem as 
 	 * a graph data structure
 	 */
@@ -43,6 +48,32 @@ public class Navigator {
 	private AbstractObject goalObject;
 	
 	/**
+	 * Exception designed when navigation fails (i.e search fails)
+	 */
+	public class NavigationFailureException extends RuntimeException {
+		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 3826713121968922686L;
+
+		/**
+		 * 
+		 */
+		public NavigationFailureException() {
+			super();
+		}
+		
+		/**
+		 * 
+		 * @param msg
+		 */
+		public NavigationFailureException(String msg) {
+			super(msg);
+		}
+	}
+	
+	/**
 	 * Initializes the object 
 	 */
 	public Navigator() {
@@ -61,7 +92,9 @@ public class Navigator {
 	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, WorldState knowledge, Ship ship) {
 		
 		// If ship is close enough to goal, then simply go straight to goal
-		if(space.findShortestDistance(goalObject.getPosition(), ship.getPosition()) < NavigationMap.SPACING * 2.0) {
+		if(goalObject != null && space.findShortestDistance(goalObject.getPosition(), 
+				ship.getPosition()) < NavigationMap.SPACING * 2.0 &&
+				path.size() < MINIMAL_PATH) {
 			return new MoveAction(space, ship.getPosition(), goalObject.getPosition(),
 					knowledge.calculateInterceptVelocity(goalObject));
 		}
@@ -98,19 +131,21 @@ public class Navigator {
 	 * @param knowledge the reference to knowledge representation used for utility functions
 	 * @param ship the ship that is transversing the path
 	 * @param goal the goal the ship needs to reach
+	 * @param obstacles the obstacles to avoid
 	 */
-	public void generateAStarPath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, AbstractObject goal) {
+	public void generateAStarPath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, 
+			AbstractObject goal, Set<AbstractObject> obstacles) {
 		currentTargetNode = null;
 		map = new NavigationMap(space, knowledge); // Generate graph for problem
 		goalObject = goal;
 		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
 		
 		try {
-			path = graphSearch.aStarSearch(); // Generate a path
+			path = graphSearch.aStarSearch(obstacles); // Generate a path
 		}
 		catch(GraphSearch.SearchFailureException e) {
-			//System.out.println(e.getMessage());
-			path = new Stack<GraphSearchNode>(); // Generate an empty stack
+			path = new Stack<GraphSearchNode>();
+			throw new NavigationFailureException("Navigation failed! Search algorithm did not find path!");
 		}
 	}
 	
@@ -134,7 +169,6 @@ public class Navigator {
 			path = graphSearch.greedyBFSearch(); // Generate a path
 		}
 		catch(GraphSearch.SearchFailureException e) {
-			//System.out.println(e.getMessage());
 			path = new Stack<GraphSearchNode>(); // Generate an empty stack
 		}
 	}

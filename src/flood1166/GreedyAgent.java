@@ -1,12 +1,9 @@
 package flood1166;
 
-
-import java.awt.Color;
 import java.util.*;
 
 import dani6621.*;
 
-import dani6621.GraphSearch.GraphSearchNode;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
 import spacesettlers.actions.MoveAction;
@@ -14,7 +11,6 @@ import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
 import spacesettlers.clients.TeamClient;
 import spacesettlers.graphics.SpacewarGraphics;
-import spacesettlers.graphics.StarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
@@ -32,9 +28,15 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 public class GreedyAgent extends TeamClient {
 	
 	/**
+	 * Number of retries at forming contingency plan
+	 * when graph search fails
+	 */
+	private static final int MAX_RETRIES = 3;
+	
+	/**
 	 * Constant will delimit whether agent can build a base
 	 */
-	private static final double MINIMUM_BASE_PURCHASE_DISTANCE = 500.0;
+	private static final double MINIMUM_BASE_PURCHASE_DISTANCE = 400.0;
 	
 	/**
 	 * Amount of time to wait before creating a new map
@@ -55,10 +57,16 @@ public class GreedyAgent extends TeamClient {
     private Navigator navigator;
     
     /**
-     * Consists of graphics to draw on the game board. Useful for debugging
-     * the navigation.
+     * Data member will contain objects that could not be 
+     * path found by the graph search at the timestep. It will
+     * be useful when forming a new plan when errors occur.
+     * 
+     * NOTE: For now, the data member will belong to this class.
+     * 			This will change later. It will probably belong to
+     * 			a knowledge representation for multi-agent
+     * 			coordination later.
      */
-    private ArrayList<SpacewarGraphics> graphicsToAdd;
+    private Map<UUID, AbstractObject> unapproachableObject;
 
     /**
      * Assigns ships to asteroids and beacons, as described above
@@ -92,67 +100,120 @@ public class GreedyAgent extends TeamClient {
         perceive(space, ship);
         
         if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
-            AbstractObject source = knowledge.getClosestEnergySource();
+        	AbstractObject source = knowledge.getClosestEnergySource(unapproachableObject);
 
             if(source == null) { // Didn't find a source
             	newAction = new DoNothingAction(); // Prevent ship from killing self
             }
             else { // Otherwise go to the energy source
             	
-            	 // Replan route
+            	// Replan route
             	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-            		navigator.generateGreedyBFPath(space, knowledge, ship, source);
+            		
+            		for(int i = 0; ; ++i) { // Allow contingnecy plan to form when failure occurs
+                		try {
+                			navigator.generateAStarPath(space, knowledge, ship, source, 
+									knowledge.getObstaclesExceptTeamBase());
+                		}
+                		catch(Navigator.NavigationFailureException e) { // After a number of retries give up
+                			
+                			if(i < MAX_RETRIES) {
+                				unapproachableObject.put(source.getId(), source); // Add as unsolvable
+                				source = knowledge.getClosestEnergySource(unapproachableObject); // Get new object
+                				continue;
+                			}
+                			else {
+                    			break;
+                    		}
+                		}
+                		break;
+                	}
                 }
             	
             	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
             	
-            	// Draw path on screen for debugging
-            	for(GraphSearchNode node : navigator.getCopyPath()) {
-            		graphicsToAdd.add(new StarGraphics(2, Color.YELLOW, node.node.position));
+            	if(newAction instanceof DoNothingAction) { // Basically search doesn't yield solution so simply go straight to source!
+            		source = knowledge.getClosestEnergySource();
+            		newAction = new MoveAction(space, ship.getPosition(), source.getPosition(), 
+            				knowledge.calculateInterceptVelocity(source));
             	}
-
-            	newAction = new MoveAction(space, ship.getPosition(), source.getPosition(),
-            			knowledge.calculateInterceptVelocity(source));
             }
         }
         else if(ship.getResources().getTotal() > WorldState.FULL_CARGO) { // Detect full cargo
-            Base closestBase = knowledge.getClosestFriendlyBase();
+            Base closestBase = knowledge.getClosestFriendlyBase(unapproachableObject);
             
             if(closestBase != null) { // Goto base that was found
-            	
-            	 // Replan route
-            	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-            		navigator.generateGreedyBFPath(space, knowledge, ship, closestBase);
+            		
+            	// Replan route
+                if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+                		
+                	for(int i = 0; ; ++i) { // Allow contingnecy plan to form when failure occurs
+                    	try {
+                    		navigator.generateAStarPath(space, knowledge, ship, closestBase, 
+                        			knowledge.getObstaclesExceptTeamBase());
+                    	}
+                    	catch(Navigator.NavigationFailureException e) { // After a number of retries give up
+                    			
+                    		if(i < MAX_RETRIES) {
+                    			unapproachableObject.put(closestBase.getId(), closestBase); // Add as unsolvable
+                    			closestBase = knowledge.getClosestFriendlyBase(unapproachableObject);
+                    			
+                    			if(closestBase != null) { // Might run out of bases to found, so check
+                        			continue;
+                    			}
+                    			else { // Heh... We ran out of bases. Not much we can do besides performing another action
+                    				break;
+                    			}
+
+                    		}
+                    		else {
+                    			break;
+                    		}
+                    	}
+                    	break;
+                    }
                 }
             	
             	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
             	
-            	// Draw path on screen for debugging
-            	for(GraphSearchNode node : navigator.getCopyPath()) {
-            		graphicsToAdd.add(new StarGraphics(2, Color.YELLOW, node.node.position));
+            	if(newAction instanceof DoNothingAction) { // Basically search doesn't yield solution so simply go straight to base!
+            		closestBase = knowledge.getClosestFriendlyBase();
+            		newAction = new MoveAction(space, ship.getPosition(), closestBase.getPosition(), 
+            				knowledge.calculateInterceptVelocity(closestBase));
             	}
-
             }
         }
         else { // Perform asteroid mining
-            // Find closest asteroid to mine
-            Asteroid closestAsteroid = knowledge.getMostEfficientMinableAsteroid();
+        	// Find closest asteroid to mine
+            Asteroid closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
             
             if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
-            	
-            	 // Replan route
-            	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-            		navigator.generateGreedyBFPath(space, knowledge, ship, closestAsteroid);
+            		
+            	// Replan route
+                if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+                		
+                	for(int i = 0; ; ++i) { // Allow contingnecy plan to form when failure occurs
+                   		try {
+                    		navigator.generateAStarPath(space, knowledge, ship, closestAsteroid, 
+    								knowledge.getObstacles());
+                    	}
+                    	catch(Navigator.NavigationFailureException e) { // After a number of retries give up
+                    			
+                    		if(i < MAX_RETRIES) {
+                        		unapproachableObject.put(closestAsteroid.getId(), closestAsteroid); // Add as unsolvable
+                    			closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
+                    			continue;
+                    		}
+                    		else {
+                    			break;
+                    		}
+                    	}
+                   		break;
+                    }
                 }
-                
-            	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
-            	
-            	// Draw path on screen for debugging
-            	for(GraphSearchNode node : navigator.getCopyPath()) {
-            		graphicsToAdd.add(new StarGraphics(2, Color.YELLOW, node.node.position));
-            	}
-            	
             }
+                
+            newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
         }
 
         return newAction;
@@ -170,13 +231,13 @@ public class GreedyAgent extends TeamClient {
 
     @Override
     public void getMovementEnd(Toroidal2DPhysics space, Set<AbstractActionableObject> actionableObjects) {
-    	
+    	unapproachableObject.clear();
     }
 
     @Override
     public void initialize(Toroidal2DPhysics space) {
     	navigator = new Navigator();
-    	graphicsToAdd = new ArrayList<SpacewarGraphics>();
+    	unapproachableObject = new HashMap<UUID, AbstractObject>();
     }
 
     @Override
@@ -187,8 +248,6 @@ public class GreedyAgent extends TeamClient {
     @Override
     public Set<SpacewarGraphics> getGraphics() {
     	HashSet<SpacewarGraphics> graphics = new HashSet<SpacewarGraphics>();
-		graphics.addAll(graphicsToAdd);
-		graphicsToAdd.clear();
 		return graphics;
     }
 

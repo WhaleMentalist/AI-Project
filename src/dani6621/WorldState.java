@@ -37,12 +37,12 @@ public class WorldState {
     /**
      * Helps to avoid agent from chasing asteroid at a slow speed
      */
-    public static final double MIN_VELOCITY_MAGNITUDE = 40.0;
+    public static final double MIN_VELOCITY_MAGNITUDE = 35.0;
 
     /**
      * Delimits if bases is viable to get energy from
      */
-    public static final double SUFFICIENT_BASE_ENERGY = 600;
+    public static final double SUFFICIENT_BASE_ENERGY = 1000;
     
     /**
      * Any algorithms that perform look-ahead will use this
@@ -177,23 +177,6 @@ public class WorldState {
         return obstacles;
     }
     
-    /*
-    public Set<AbstractObject> getObstaclesFuture() {
-    	Set<AbstractObject> obstacles = new HashSet<AbstractObject>();
-    	Position futurePosition;
-    	Position currentPosition;
-    	
-    	for(AbstractObject asteroid : getUnmineableAsteroids()) {
-    		
-    		if(asteroid.isMoveable()) {
-    			currentPosition = asteroid.getPosition();
-    			// futurePosition = currentPosition.setX(x);
-    			// obstacles.add();
-    		}
-    	}
-    }
-	*/
-    
     /**
      * This will generate a list of obstacles with the
      * exception of team bases
@@ -211,19 +194,30 @@ public class WorldState {
     /**
      * Function will return the most efficient asteroid in teh simulation (i.e the amount
      * of resource per unit of distance)
-     *
+     * 
+     * @param untouchables objects that will NOT be considered
      * @return an <code>Asteroid</code> object that is most efficient to ship
      */
-    public Asteroid getMostEfficientMinableAsteroid() {
+    public Asteroid getMostEfficientMinableAsteroid(Map<UUID, AbstractObject> untouchables) {
         double costEffectiveness = Double.NEGATIVE_INFINITY; // Most effective asteroid (higher is better)
         double dist; // Store distance to object
         double currentCostEffectiveness; // Store the cost effectiveness of current asteroid
         Asteroid candidate = null; // The variable will hold asteroid that was found
         Position shipPos = _referenceShip.getPosition(); // Retrieve current position of ship
+        Vector2D pathOfShip = shipPos.getTranslationalVelocity(); // Get velocity of ship
+        Vector2D toAsteroid;
+        double angleBetween = Math.PI; // Set to maximum angle
 
         for (Asteroid asteroid : getMineableAsteroids()) {
+        	
+        	if(untouchables.containsKey(asteroid.getId())) { // Skip object
+        		continue;
+        	}
+        	
             dist = _space.findShortestDistance(shipPos, asteroid.getPosition());
-            currentCostEffectiveness = asteroid.getResources().getTotal() / dist; // Cost effectiveness calculation
+            toAsteroid = _space.findShortestDistanceVector(shipPos, asteroid.getPosition()); // Get vector pointing from ship to asteroid
+            angleBetween = pathOfShip.angleBetween(toAsteroid); // Get angle between asteroid and ship velocity
+            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist * (1.0 + Math.pow(angleBetween, 2))); // Cost effectiveness calculation
             if (currentCostEffectiveness > costEffectiveness) { // Check if asteroid closer to ship and clear of obstructions
                 costEffectiveness = currentCostEffectiveness; // Reassign shortest distance
                 candidate = asteroid;
@@ -232,6 +226,32 @@ public class WorldState {
         return candidate;
     }
 
+    /**
+     * Function will retrieve the closest team base to reference ship
+     *
+     * @param untouchables objects that will NOT be considered
+     * @return  <code>Base</code> object closest to ship
+     */
+    public Base getClosestFriendlyBase(Map<UUID, AbstractObject> untouchables) {
+        double shortestDist = Double.POSITIVE_INFINITY;
+        double dist;
+        Base candidate = null;
+        Position shipPos = _referenceShip.getPosition();
+        for (Base base : getTeamBases()) { // Go through team bases
+        	
+        	if(untouchables.containsKey(base.getId())) { // Skip object
+        		continue;
+        	}
+        	
+            dist = _space.findShortestDistance(shipPos, base.getPosition());
+            if (dist < shortestDist) { // Check if the best candidate is beaten
+                shortestDist = dist;
+                candidate = base;
+            }
+        }
+        return candidate;
+    }
+    
     /**
      * Function will retrieve the closest team base to reference ship
      *
@@ -282,14 +302,20 @@ public class WorldState {
      * (i.e distance formula). It will consider friendly bases with sufficient
      * energy
      *
+     * @param untouchables objects that will NOT be considered
      * @return <code>AbstractObject</code> object that is closest to ship
      */
-    public AbstractObject getClosestEnergySource() {
+    public AbstractObject getClosestEnergySource(Map<UUID, AbstractObject> untouchables) {
         double shortestDist = Double.POSITIVE_INFINITY;
         double dist;
         AbstractObject candidate = null; // The variable will hold beacon that was found
         Position shipPos = _referenceShip.getPosition();
         for (AbstractObject energySource : getEnergySources()) {
+        	
+        	if(untouchables.containsKey(energySource.getId())) { // Skip object
+        		continue;
+        	}
+        	
             dist = _space.findShortestDistance(shipPos, energySource.getPosition());
 
             if(energySource instanceof Base) { // Check if it is base
@@ -306,6 +332,38 @@ public class WorldState {
         }
         return candidate;
     }
+    
+    /**
+     * Function will return closest energy source to ship using a straight path
+     * (i.e distance formula). It will consider friendly bases with sufficient
+     * energy
+     *
+     * @return <code>AbstractObject</code> object that is closest to ship
+     */
+    public AbstractObject getClosestEnergySource() {
+        double shortestDist = Double.POSITIVE_INFINITY;
+        double dist;
+        AbstractObject candidate = null; // The variable will hold beacon that was found
+        Position shipPos = _referenceShip.getPosition();
+        for (AbstractObject energySource : getEnergySources()) {
+        	
+            dist = _space.findShortestDistance(shipPos, energySource.getPosition());
+
+            if(energySource instanceof Base) { // Check if it is base
+                if(((Base) energySource).getEnergy() < SUFFICIENT_BASE_ENERGY) { // Check if bases has sufficient energy
+                    continue; // Skip if base is too low on energy
+                }
+            }
+
+            // Otherwise see if it is closer
+            if (dist < shortestDist) {
+                shortestDist = dist; // Reassign shortest distance
+                candidate = energySource;
+            }
+        }
+        return candidate;
+    }
+
 
     /**
      * Function helps ship to intercept object in space for faster retrieval.
