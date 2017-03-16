@@ -217,7 +217,7 @@ public class WorldState {
             dist = _space.findShortestDistance(shipPos, asteroid.getPosition());
             toAsteroid = _space.findShortestDistanceVector(shipPos, asteroid.getPosition()); // Get vector pointing from ship to asteroid
             angleBetween = pathOfShip.angleBetween(toAsteroid); // Get angle between asteroid and ship velocity
-            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist * (1.0 + Math.pow(angleBetween, 2))); // Cost effectiveness calculation
+            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist * (1.0 + Math.pow(angleBetween, 2.0))); // Cost effectiveness calculation
             if (currentCostEffectiveness > costEffectiveness) { // Check if asteroid closer to ship and clear of obstructions
                 costEffectiveness = currentCostEffectiveness; // Reassign shortest distance
                 candidate = asteroid;

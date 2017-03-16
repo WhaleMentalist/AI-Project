@@ -242,6 +242,8 @@ public class AStarAgent extends TeamClient {
     public void initialize(Toroidal2DPhysics space) {
     	navigator = new Navigator();
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
+    	Chromosome chromosome = ChromosomeFactory.createChromosome();
+    	System.out.println(chromosome.toString());
     }
     
     /**

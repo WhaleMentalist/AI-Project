@@ -51,13 +51,6 @@ public class Chromosome {
 	public final double ASTEROID_RESOURCE_DISTANCE_RATIO_THRESHOLD;
 	
 	/**
-	 * Component will guide the agent as to whether the competition
-	 * is TOO CLOSE to a resource (i.e agent will be beaten and should find
-	 * an alternative)
-	 */
-	public final double COMPETITION_DISTANCE_THRESHOLD;
-	
-	/**
 	 * Component will guide the distance ship needs before 
 	 * attempting to build another base
 	 */
@@ -69,6 +62,13 @@ public class Chromosome {
 	public final int MAXIMUM_SHIP_NUMBER;
 	
 	/**
+	 * Component will dictate how much the angle of the asteroid will
+	 * affect its cost
+	 */
+	public final double ANGLE_WEIGHT;
+	
+	/**
+	 * Basic constructor for chromosome generation
 	 * 
 	 * @param energyThreshold
 	 * @param obstacleDetection
@@ -80,12 +80,13 @@ public class Chromosome {
 	 * @param competitionDistanceThreshold
 	 * @param baseBuildDistanceThreshold
 	 * @param maximumShipCount
+	 * @param angleWeight
 	 */
 	public Chromosome(double energyThreshold, double obstacleDetection,
 			double maximumVelocity, double minimumVelocity, int cargoholdCapacity,
-			double maximumDistanceToAsteroid, double asteroidResourceDistanceRatio,
-			double competitionDistanceThreshold, double baseBuildDistanceThreshold,
-			int maximumShipCount) {
+			double maximumDistanceToAsteroid, double asteroidResourceDistanceRatio, 
+			double baseBuildDistanceThreshold, int maximumShipCount, 
+			double angleWeight) {
 		ENERGY_REFUEL_THRESHOLD = energyThreshold;
 		OBSTACLE_DETECTION_THRESHOLD = obstacleDetection;
 		MAXIMUM_VELOCITY = maximumVelocity;
@@ -93,9 +94,28 @@ public class Chromosome {
 		CARGOHOLD_CAPACITY = cargoholdCapacity;
 		MAXIMUM_DISTANCE_TO_ASTEROID = maximumDistanceToAsteroid;
 		ASTEROID_RESOURCE_DISTANCE_RATIO_THRESHOLD = asteroidResourceDistanceRatio;
-		COMPETITION_DISTANCE_THRESHOLD = competitionDistanceThreshold;
 		BASE_BUILD_DISTANCE_THRESHOLD = baseBuildDistanceThreshold;
 		MAXIMUM_SHIP_NUMBER = maximumShipCount;
+		ANGLE_WEIGHT = angleWeight;
+	}
+	
+	/**
+	 * 
+	 */
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("Energy Threshold: " + ENERGY_REFUEL_THRESHOLD + "\n" +
+						"Obstacle Detection: " + OBSTACLE_DETECTION_THRESHOLD + "\n" +
+						"Max Velocity: " + MAXIMUM_VELOCITY + "\n" +
+						"Min Velocity: " + MINIMUM_VELOCITY + "\n" + 
+						"Cargohold Capacity: " + CARGOHOLD_CAPACITY + "\n" +
+						"Max Distance To Asteroid: " + MAXIMUM_DISTANCE_TO_ASTEROID + "\n" +
+						"Asteroid Resource vs Distance: " + ASTEROID_RESOURCE_DISTANCE_RATIO_THRESHOLD + "\n" +
+						"Base Build Distance: " + BASE_BUILD_DISTANCE_THRESHOLD + "\n" + 
+						"Max Ship Count: " + MAXIMUM_SHIP_NUMBER + "\n" + 
+						"Angle Weight: " + ANGLE_WEIGHT + "\n");
+		return builder.toString();
 	}
 	
 }
