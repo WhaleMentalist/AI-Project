@@ -1,6 +1,16 @@
 package dani6621;
 
-import java.util.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
@@ -24,6 +34,13 @@ import spacesettlers.simulator.Toroidal2DPhysics;
  * <code>WorldState</code> reference data member
  */
 public class AStarAgent extends TeamClient {
+	
+	/**
+	 * Population amount per generation for genetic algorithm
+	 * NOTE: Ended up using 10 times the amount of parameters in 
+	 * chromosome as guideline
+	 */
+	private static final int POPULATION_COUNT = 100;
 	
 	/**
 	 * Number of retries at forming contingency plan
@@ -62,7 +79,8 @@ public class AStarAgent extends TeamClient {
      * NOTE: For now, the data member will belong to this class.
      * 			This will change later. It will probably belong to
      * 			a knowledge representation for multi-agent
-     * 			coordination later.
+     * 			coordination later. Each agent would have their own
+     * 			list of objects.
      */
     private Map<UUID, AbstractObject> unapproachableObject;
 
@@ -228,7 +246,7 @@ public class AStarAgent extends TeamClient {
     }
     
     /**
-     * 
+     * Cleanup and other operations when movement phase ends
      */
     @Override
     public void getMovementEnd(Toroidal2DPhysics space, Set<AbstractActionableObject> actionableObjects) {
@@ -236,14 +254,76 @@ public class AStarAgent extends TeamClient {
     }
     
     /**
-     * 
+     * This will initialize any pieces of data teh agent needs before the game 
+     * starts. An example is the chromosome or the navigator.
      */
     @Override
     public void initialize(Toroidal2DPhysics space) {
     	navigator = new Navigator();
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
-    	Chromosome chromosome = ChromosomeFactory.createChromosome();
-    	System.out.println(chromosome.toString());
+    	
+    	// Path to base directory of project
+    	Path path = Paths.get("").toAbsolutePath().getParent();
+    	
+    	// Create base directory containing knowledge files (This will NOT overwrite if it already exists)
+    	new File(path.toString() + "/knowledge/").mkdirs();
+    	
+    	// Need to check if one population file even exists
+    	File directory = new File(path.toString() + "/knowledge/");
+    	
+    	File[] files = directory.listFiles(); // Get list of all files in the directory
+    	
+    	String tempPath = ""; // Temporary storage for comparison
+    	String candidatePath = ""; // Path to file that is latest population file
+    	int tempNumber = -1; // Temporary storage for comparison
+    	int candidateNumber = -1; // The number that delimits generation number (i.e higher means more recent)
+    	
+    	for(File file : files) { // Iterate through each file in list
+    		tempPath = file.getAbsolutePath();
+    		System.out.println(tempPath); // DEBUG
+    		
+    		if(file.getName().contains("generation")) { // Check if file has delimiter for population file
+    			
+    			tempNumber = Integer.parseInt(file.getName().substring(10, file.getName().length() - 4)); // Get number at end of file name without extension
+    			
+    			// Get lastest population file path and store its number for comparisons
+    			if(tempNumber > candidateNumber) {
+    				candidateNumber = tempNumber;
+    				candidatePath = tempPath;
+    			}
+    		}
+    	}
+    	
+    	// There was no file found. Must create initial population
+    	if(candidatePath.equals("")) {
+    		BufferedWriter writer = null;
+    		System.out.println("Did not find file. Creating initial population.");
+    		
+    		try {
+				writer = new BufferedWriter(new FileWriter(directory + "/generation0.txt"));
+				
+				// Create initial population (that is hopefully diverse)
+				for(int i = 0; i < POPULATION_COUNT; ++i) {
+					writer.write(ChromosomeFactory.createChromosome().toString());
+				}
+			} 
+    		catch (IOException e) {
+				e.printStackTrace();
+			}
+    		finally {
+    			if(writer != null) {
+    				try {
+						writer.close();
+					} 
+    				catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+    			}
+    		}
+    	}
+    	
+    	System.out.println(candidatePath);
     }
     
     /**

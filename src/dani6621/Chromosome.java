@@ -105,16 +105,16 @@ public class Chromosome {
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append("Energy Threshold: " + ENERGY_REFUEL_THRESHOLD + "\n" +
-						"Obstacle Detection: " + OBSTACLE_DETECTION_THRESHOLD + "\n" +
-						"Max Velocity: " + MAXIMUM_VELOCITY + "\n" +
-						"Min Velocity: " + MINIMUM_VELOCITY + "\n" + 
-						"Cargohold Capacity: " + CARGOHOLD_CAPACITY + "\n" +
-						"Max Distance To Asteroid: " + MAXIMUM_DISTANCE_TO_ASTEROID + "\n" +
-						"Asteroid Resource vs Distance: " + ASTEROID_RESOURCE_DISTANCE_RATIO_THRESHOLD + "\n" +
-						"Base Build Distance: " + BASE_BUILD_DISTANCE_THRESHOLD + "\n" + 
-						"Max Ship Count: " + MAXIMUM_SHIP_NUMBER + "\n" + 
-						"Angle Weight: " + ANGLE_WEIGHT + "\n");
+		builder.append(ENERGY_REFUEL_THRESHOLD + " " +
+						+ OBSTACLE_DETECTION_THRESHOLD + " " +
+						+ MAXIMUM_VELOCITY + " " +
+						+ MINIMUM_VELOCITY + " " + 
+						+ CARGOHOLD_CAPACITY + " " +
+						+ MAXIMUM_DISTANCE_TO_ASTEROID + " " +
+						+ ASTEROID_RESOURCE_DISTANCE_RATIO_THRESHOLD + " " +
+						+ BASE_BUILD_DISTANCE_THRESHOLD + " " + 
+						+ MAXIMUM_SHIP_NUMBER + " " + 
+						+ ANGLE_WEIGHT + "\n");
 		return builder.toString();
 	}
 	

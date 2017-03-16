@@ -11,10 +11,11 @@ import java.util.Random;
 public final class Utility {
 	
 	/**
+	 * Generates a random double value that is in the specified range
 	 * 
-	 * @param min
-	 * @param max
-	 * @return
+	 * @param min	the bottom range value
+	 * @param max	the top range value
+	 * @return	a random double
 	 */
 	public static double randomDouble(double min, double max) {
 		Random rand = new Random();
@@ -22,10 +23,11 @@ public final class Utility {
 	}
 	
 	/**
+	 * Generates a random integer value that is in the specified range
 	 * 
-	 * @param min
-	 * @param max
-	 * @return
+	 * @param min	the bottom range value
+	 * @param max	the top range value
+	 * @return	a random integer
 	 */
 	public static int randomInteger(int min, int max) {
 		Random rand = new Random();
