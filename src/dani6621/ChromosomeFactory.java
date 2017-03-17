@@ -11,13 +11,13 @@ public class ChromosomeFactory {
 	 * Maximum range for energy threshold constant when generating
 	 * random values
 	 */
-	private static final double MAX_ENERGY_RANGE = 4500.0;
+	private static final int MAX_ENERGY_RANGE = 4500;
 	
 	/**
 	 * Minimum range for energy threshold constant when generating
 	 * random values
 	 */
-	private static final double MIN_ENERGY_RANGE = 500.0;
+	private static final int MIN_ENERGY_RANGE = 500;
 	
 	/**
 	 * Maximum range for obstacle detection threshold constant when generating
@@ -134,7 +134,7 @@ public class ChromosomeFactory {
 	private static final double MAX_ANGLE_WEIGHT_RANGE = 20.0;
 	
 	public static Chromosome createChromosome() {
-		double energyThreshold = Utility.randomDouble(MIN_ENERGY_RANGE, MAX_ENERGY_RANGE);
+		int energyThreshold = Utility.randomInteger(MIN_ENERGY_RANGE, MAX_ENERGY_RANGE);
 		double obstacleDetectionThreshold = Utility.randomDouble(MIN_OBSTACLE_DETECTION_RANGE, MAX_OBSTACLE_DETECTION_RANGE);
 		double maximumVelocity = Utility.randomDouble(MIN_MAX_VELOCITY_RANGE, MAX_MAX_VELOCITY_RANGE);
 		double minimumVelocity = Utility.randomDouble(MIN_MIN_VELOCITY_RANGE, MAX_MIN_VELOCITY_RANGE);

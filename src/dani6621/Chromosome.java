@@ -12,7 +12,7 @@ public class Chromosome {
 	 * Component that guides when ship is to refuel at 
 	 * certain energy level
 	 */
-	public final double ENERGY_REFUEL_THRESHOLD;
+	public final int ENERGY_REFUEL_THRESHOLD;
 	
 	/**
 	 * Component that will dictate when obstacles detected in the 
@@ -82,7 +82,7 @@ public class Chromosome {
 	 * @param maximumShipCount
 	 * @param angleWeight
 	 */
-	public Chromosome(double energyThreshold, double obstacleDetection,
+	public Chromosome(int energyThreshold, double obstacleDetection,
 			double maximumVelocity, double minimumVelocity, int cargoholdCapacity,
 			double maximumDistanceToAsteroid, double asteroidResourceDistanceRatio, 
 			double baseBuildDistanceThreshold, int maximumShipCount, 

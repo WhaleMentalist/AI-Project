@@ -1,11 +1,5 @@
 package dani6621;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -36,13 +30,6 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 public class AStarAgent extends TeamClient {
 	
 	/**
-	 * Population amount per generation for genetic algorithm
-	 * NOTE: Ended up using 10 times the amount of parameters in 
-	 * chromosome as guideline
-	 */
-	private static final int POPULATION_COUNT = 100;
-	
-	/**
 	 * Number of retries at forming contingency plan
 	 * when graph search fails
 	 */
@@ -70,6 +57,14 @@ public class AStarAgent extends TeamClient {
      * also change
      */
     private Navigator navigator;
+    
+    /**
+     * Holds the data that will govern the behavior of the 
+     * agent. It has constants that guide the agent's reaction to the environment.
+     * Ideally, the genetic algorithm will produce the optimal chromosome after
+     * enough iterations (generations).
+     */
+    private Chromosome chromosome;
     
     /**
      * Data member will contain objects that could not be 
@@ -259,71 +254,18 @@ public class AStarAgent extends TeamClient {
      */
     @Override
     public void initialize(Toroidal2DPhysics space) {
+    	
+    	// Create navigation and track list of objects that could not be approached
     	navigator = new Navigator();
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
     	
-    	// Path to base directory of project
-    	Path path = Paths.get("").toAbsolutePath().getParent();
+    	ChromosomeBookeeper bookeeper = new ChromosomeBookeeper(); // Need to issue a request for data
+    	chromosome = bookeeper.getAssignedChromosome(); // Retrieve the assigned chromosome
+    	chromosome = null;
     	
-    	// Create base directory containing knowledge files (This will NOT overwrite if it already exists)
-    	new File(path.toString() + "/knowledge/").mkdirs();
-    	
-    	// Need to check if one population file even exists
-    	File directory = new File(path.toString() + "/knowledge/");
-    	
-    	File[] files = directory.listFiles(); // Get list of all files in the directory
-    	
-    	String tempPath = ""; // Temporary storage for comparison
-    	String candidatePath = ""; // Path to file that is latest population file
-    	int tempNumber = -1; // Temporary storage for comparison
-    	int candidateNumber = -1; // The number that delimits generation number (i.e higher means more recent)
-    	
-    	for(File file : files) { // Iterate through each file in list
-    		tempPath = file.getAbsolutePath();
-    		System.out.println(tempPath); // DEBUG
-    		
-    		if(file.getName().contains("generation")) { // Check if file has delimiter for population file
-    			
-    			tempNumber = Integer.parseInt(file.getName().substring(10, file.getName().length() - 4)); // Get number at end of file name without extension
-    			
-    			// Get lastest population file path and store its number for comparisons
-    			if(tempNumber > candidateNumber) {
-    				candidateNumber = tempNumber;
-    				candidatePath = tempPath;
-    			}
-    		}
+    	if(chromosome == null) {
+    		System.exit(0);
     	}
-    	
-    	// There was no file found. Must create initial population
-    	if(candidatePath.equals("")) {
-    		BufferedWriter writer = null;
-    		System.out.println("Did not find file. Creating initial population.");
-    		
-    		try {
-				writer = new BufferedWriter(new FileWriter(directory + "/generation0.txt"));
-				
-				// Create initial population (that is hopefully diverse)
-				for(int i = 0; i < POPULATION_COUNT; ++i) {
-					writer.write(ChromosomeFactory.createChromosome().toString());
-				}
-			} 
-    		catch (IOException e) {
-				e.printStackTrace();
-			}
-    		finally {
-    			if(writer != null) {
-    				try {
-						writer.close();
-					} 
-    				catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-    			}
-    		}
-    	}
-    	
-    	System.out.println(candidatePath);
     }
     
     /**
