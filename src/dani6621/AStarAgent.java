@@ -1,6 +1,10 @@
 package dani6621;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
@@ -55,6 +59,14 @@ public class AStarAgent extends TeamClient {
     private Navigator navigator;
     
     /**
+     * Holds the data that will govern the behavior of the 
+     * agent. It has constants that guide the agent's reaction to the environment.
+     * Ideally, the genetic algorithm will produce the optimal chromosome after
+     * enough iterations (generations).
+     */
+    private Chromosome chromosome;
+    
+    /**
      * Data member will contain objects that could not be 
      * path found by the graph search at the timestep. It will
      * be useful when forming a new plan when errors occur.
@@ -62,7 +74,8 @@ public class AStarAgent extends TeamClient {
      * NOTE: For now, the data member will belong to this class.
      * 			This will change later. It will probably belong to
      * 			a knowledge representation for multi-agent
-     * 			coordination later.
+     * 			coordination later. Each agent would have their own
+     * 			list of objects.
      */
     private Map<UUID, AbstractObject> unapproachableObject;
 
@@ -228,7 +241,7 @@ public class AStarAgent extends TeamClient {
     }
     
     /**
-     * 
+     * Cleanup and other operations when movement phase ends
      */
     @Override
     public void getMovementEnd(Toroidal2DPhysics space, Set<AbstractActionableObject> actionableObjects) {
@@ -236,12 +249,23 @@ public class AStarAgent extends TeamClient {
     }
     
     /**
-     * 
+     * This will initialize any pieces of data teh agent needs before the game 
+     * starts. An example is the chromosome or the navigator.
      */
     @Override
     public void initialize(Toroidal2DPhysics space) {
+    	
+    	// Create navigation and track list of objects that could not be approached
     	navigator = new Navigator();
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
+    	
+    	ChromosomeBookeeper bookeeper = new ChromosomeBookeeper(); // Need to issue a request for data
+    	chromosome = bookeeper.getAssignedChromosome(); // Retrieve the assigned chromosome
+    	chromosome = null;
+    	
+    	if(chromosome == null) {
+    		System.exit(0);
+    	}
     }
     
     /**

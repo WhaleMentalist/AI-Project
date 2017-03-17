@@ -239,6 +239,7 @@ public class PacifistHeuristicAsteroidCollectorTeamClient extends TeamClient {
 		asteroidToShipMap = new HashMap<UUID, Ship>();
 		aimingForBase = new HashMap<UUID, Boolean>();
 		
+		/*
 		XStream xstream = new XStream();
 		xstream.alias("ExampleKnowledge", ExampleKnowledge.class);
 
@@ -249,6 +250,7 @@ public class PacifistHeuristicAsteroidCollectorTeamClient extends TeamClient {
 			// the error will happen the first time you run
 			myKnowledge = new ExampleKnowledge();
 		}
+		*/
 	}
 
 	/**
@@ -258,6 +260,7 @@ public class PacifistHeuristicAsteroidCollectorTeamClient extends TeamClient {
 	 */
 	@Override
 	public void shutDown(Toroidal2DPhysics space) {
+		/*
 		XStream xstream = new XStream();
 		xstream.alias("ExampleKnowledge", ExampleKnowledge.class);
 
@@ -272,6 +275,7 @@ public class PacifistHeuristicAsteroidCollectorTeamClient extends TeamClient {
 			// TODO Auto-generated catch block
 			myKnowledge = new ExampleKnowledge();
 		}
+		*/
 	}
 
 	@Override
