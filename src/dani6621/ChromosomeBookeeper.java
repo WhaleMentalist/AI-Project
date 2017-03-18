@@ -199,10 +199,10 @@ public class ChromosomeBookeeper {
 			}
 		}
 		
-		System.out.println("File Found: " + latestGeneration);
-		
 		// If we never found a file, then we need to initialize the initial population
 		if(latestGeneration.equals("")) {
+			
+			System.out.println("No population file found... Creating initial population...");
 			
 			// Create path to initial file we will create - notice it uses '0' for first generation
 			latestGeneration = new String(projectPath.toString() + KNOWLEDGE_DIRECTORY_NAME + KNOWLEDGE_FILE_BASE_NAME + "0" +
@@ -228,6 +228,9 @@ public class ChromosomeBookeeper {
 			catch (IOException e) {
 				e.printStackTrace();
 			}
+		}
+		else { // Found population file
+			System.out.println("File found: " + latestGeneration);
 		}
 	}
 	

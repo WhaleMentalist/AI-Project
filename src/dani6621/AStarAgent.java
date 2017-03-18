@@ -30,6 +30,11 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 public class AStarAgent extends TeamClient {
 	
 	/**
+	 * Error code for lack of chromosome assignment
+	 */
+	private static final int CHROMOSOME_ASSIGNMENT_FAILURE = 1;
+	
+	/**
 	 * Number of retries at forming contingency plan
 	 * when graph search fails
 	 */
@@ -249,7 +254,7 @@ public class AStarAgent extends TeamClient {
     }
     
     /**
-     * This will initialize any pieces of data teh agent needs before the game 
+     * This will initialize any pieces of data the agent needs before the game 
      * starts. An example is the chromosome or the navigator.
      */
     @Override
@@ -261,10 +266,10 @@ public class AStarAgent extends TeamClient {
     	
     	ChromosomeBookeeper bookeeper = new ChromosomeBookeeper(); // Need to issue a request for data
     	chromosome = bookeeper.getAssignedChromosome(); // Retrieve the assigned chromosome
-    	chromosome = null;
     	
+    	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
     	if(chromosome == null) {
-    		System.exit(0);
+    		System.exit(CHROMOSOME_ASSIGNMENT_FAILURE);
     	}
     }
     
