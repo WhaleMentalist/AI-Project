@@ -11,6 +11,7 @@ import spacesettlers.actions.DoNothingAction;
 import spacesettlers.actions.MoveAction;
 import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
+import spacesettlers.clients.ImmutableTeamInfo;
 import spacesettlers.clients.TeamClient;
 import spacesettlers.graphics.SpacewarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
@@ -28,6 +29,11 @@ import spacesettlers.simulator.Toroidal2DPhysics;
  * <code>WorldState</code> reference data member
  */
 public class AStarAgent extends TeamClient {
+	
+	/**
+	 * Error code for lack of chromosome assignment
+	 */
+	private static final int CHROMOSOME_ASSIGNMENT_FAILURE = 1;
 	
 	/**
 	 * Number of retries at forming contingency plan
@@ -64,7 +70,7 @@ public class AStarAgent extends TeamClient {
      * Ideally, the genetic algorithm will produce the optimal chromosome after
      * enough iterations (generations).
      */
-    private Chromosome chromosome;
+    private ChromosomeBookKeeper bookKeeper;
     
     /**
      * Data member will contain objects that could not be 
@@ -249,7 +255,7 @@ public class AStarAgent extends TeamClient {
     }
     
     /**
-     * This will initialize any pieces of data teh agent needs before the game 
+     * This will initialize any pieces of data the agent needs before the game 
      * starts. An example is the chromosome or the navigator.
      */
     @Override
@@ -259,21 +265,30 @@ public class AStarAgent extends TeamClient {
     	navigator = new Navigator();
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
     	
-    	ChromosomeBookeeper bookeeper = new ChromosomeBookeeper(); // Need to issue a request for data
-    	chromosome = bookeeper.getAssignedChromosome(); // Retrieve the assigned chromosome
-    	chromosome = null;
+    	// The 'ChromosomeBookKeeper' is much like a librarian with books
+    	bookKeeper = new ChromosomeBookKeeper(); // Need to issue a request for data
     	
-    	if(chromosome == null) {
-    		System.exit(0);
+    	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
+    	if(bookKeeper.isAssignedChromosome()) {
+    		System.exit(CHROMOSOME_ASSIGNMENT_FAILURE); // Terminate JVM process
     	}
     }
     
     /**
-     * 
+     * Method will perform set of operations at game shutdown...
+     * Basically, the genetic algorithm cleanup and calculations
      */
     @Override
     public void shutDown(Toroidal2DPhysics space) {
-
+    	
+    	double totalScore = 0;
+    	
+    	for(ImmutableTeamInfo info : space.getTeamInfo()) {
+    		if(info.getTeamName().equals("Padawan Daniel and Flood")) {
+    			totalScore = info.getScore();
+    		}
+    	}
+    	bookKeeper.assignFitness(totalScore);
     }
     
     /**

@@ -2,7 +2,6 @@ package dani6621;
 
 import java.util.*;
 
-
 import dani6621.NavigationMap.NavigationVertex;
 import dani6621.NavigationMap.NavigationVertexKey;
 import spacesettlers.objects.AbstractObject;
