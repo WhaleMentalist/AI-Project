@@ -70,7 +70,7 @@ public class AStarAgent extends TeamClient {
      * Ideally, the genetic algorithm will produce the optimal chromosome after
      * enough iterations (generations).
      */
-    private ChromosomeBookKeeper bookKeeper;
+    private IndividualBookKeeper bookKeeper;
     
     /**
      * Data member will contain objects that could not be 
@@ -266,7 +266,7 @@ public class AStarAgent extends TeamClient {
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
     	
     	// The 'ChromosomeBookKeeper' is much like a librarian with books
-    	bookKeeper = new ChromosomeBookKeeper(); // Need to issue a request for data
+    	bookKeeper = new IndividualBookKeeper(); // Need to issue a request for data
     	
     	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
     	if(bookKeeper.isAssignedChromosome()) {

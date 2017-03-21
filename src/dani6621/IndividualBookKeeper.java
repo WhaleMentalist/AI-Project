@@ -15,19 +15,19 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * Class is designed to hold data on chromosomes, create an initial 
+ * Class is designed to hold data on individuals, create an initial 
  * population, generate new generations (selection, crossover, and mutation),
- * assign chromosomes to agent, regulate access to files containing chromosomes 
- * among processes, and keep information of chromosomes updated.
+ * assign individuals to agent, regulate access to files containing individuals 
+ * among processes, and keep information of individuals updated.
  *
  */
-public class ChromosomeBookKeeper {
+public class IndividualBookKeeper {
 	
 	/**
 	 * This is the amount of chromosomes that will be produced 
 	 * in each generation
 	 */
-	private static final int POPULATION_COUNT = 100;
+	public static final int POPULATION_COUNT = 100;
 	
 	/**
 	 * Variable will help cut extension off the file name
@@ -52,39 +52,39 @@ public class ChromosomeBookKeeper {
 	/**
 	 * Number of tokens for unassigned chromosome
 	 */
-	private static final int UNASSIGNED = 10;
+	private static final int UNASSIGNED = 8;
 	
 	/**
-	 * Holds the path to file holding latest generation
+	 * Holds the path to file holding assigned generation
 	 */
-	private String latestGeneration;
+	private String assignedGeneration;
 	
 	/**
-	 * Hold the chromosome that was assigned. It will correspond to a 
+	 * Hold the individual that was assigned. It will correspond to a 
 	 * line within the file
 	 */
-	private int assignedChromosomeID;
+	private int assignedIndividualID;
 	
 	/**
-	 * The assigned chromosome
+	 * The assigned individual
 	 */
-	private Chromosome assignedChromosome;
+	private Individual assignedIndividual;
 	
 	/**
 	 * Basic constructor
 	 */
-	public ChromosomeBookKeeper() {
-		latestGeneration = "";
-		assignedChromosomeID = -1;
-		assignedChromosome = null;
+	public IndividualBookKeeper() {
+		assignedGeneration = "";
+		assignedIndividualID = -1;
+		assignedIndividual = null;
 		initialize(); // Always run initialization to check existance and/or prepare file structure
-		assignChromosome(); // Attempt to assign chromosome
+		assignIndividual(); // Attempt to assign chromosome
 	}
 	
 	/**
 	 * Method creates neccessary directory and initial population 
 	 * if it is needed. It will also find the latest generation file to
-	 * start assigning a chromosome to the program.
+	 * start assigning an individual to the program.
 	 */
 	private void initialize() {
 		
@@ -124,23 +124,23 @@ public class ChromosomeBookKeeper {
 				// If we find an even later generation value
 				if(generationNumber > latestGenerationNumber) {
 					latestGenerationNumber = generationNumber;
-					latestGeneration = filePath; // Set data member to value
+					assignedGeneration = filePath; // Set data member to value
 				}
 			}
 		}
 		
 		// If we never found a file, then we need to initialize the initial population
-		if(latestGeneration.equals("")) {
+		if(assignedGeneration.equals("")) {
 			
 			System.out.println("No population file found... Creating initial population...");
 			
 			// Create path to initial file we will create - notice it uses '0' for first generation
-			latestGeneration = new String(projectPath.toString() + KNOWLEDGE_DIRECTORY_NAME + KNOWLEDGE_FILE_BASE_NAME + "0" +
+			assignedGeneration = new String(projectPath.toString() + KNOWLEDGE_DIRECTORY_NAME + KNOWLEDGE_FILE_BASE_NAME + "0" +
 											EXTENSION);
 			
 			try {
 				// Open for writing
-				FileOutputStream outputStream = new FileOutputStream(new File(latestGeneration), false);
+				FileOutputStream outputStream = new FileOutputStream(new File(assignedGeneration), false);
 				FileChannel fileChannel = outputStream.getChannel();
 				
 				System.out.println("File Channel opened for write. Attempting to aquire lock (in blocking mode)...");
@@ -149,7 +149,9 @@ public class ChromosomeBookKeeper {
 				System.out.println("Lock is shared: " + lock.isShared());
 				
 				for(int i = 0; i < POPULATION_COUNT; ++i) {
-					fileChannel.write(ByteBuffer.wrap(ChromosomeFactory.createChromosome().toString().getBytes()));
+					fileChannel.write(ByteBuffer.
+							wrap(IndividualFactory.createIndividual().
+							toString().getBytes()));
 				}
 				
 				outputStream.close(); // Close stream (also closes associated channel)... Also it releases the lock
@@ -160,24 +162,24 @@ public class ChromosomeBookKeeper {
 			}
 		}
 		else { // Found population file
-			System.out.println("File found: " + latestGeneration);
+			System.out.println("File found: " + assignedGeneration);
 		}
 	}
 	
 	/**
-	 * Method will assign a chromosome by finding first unassigned 
-	 * instance in the 'latestGeneration' file. If it does it will
-	 * need to rewrite whole file in order to mark chromosome as 
+	 * Method will assign a individual by finding first unassigned 
+	 * instance in the 'assignedGeneration' file. If it does it will
+	 * need to rewrite whole file in order to mark individual as 
 	 * used. This has to do with how files work (i.e no programming langauage could
 	 * fix this problem). It shouldn't cause too much delay, as the file sizes are 
 	 * small (100 lines at most).
 	 */
-	private void assignChromosome() {
+	private void assignIndividual() {
 		
 		try {
 			
 			// This is just a convention you have to follow if you want to make read and write synchronized
-			File file = new File(latestGeneration);
+			File file = new File(assignedGeneration);
 			RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"); // Open in read-write mode
 			FileChannel fileChannel = randomAccessFile.getChannel(); // Get fiel channel associated
 			
@@ -195,24 +197,23 @@ public class ChromosomeBookKeeper {
 			String line = bufferedReader.readLine(); // Read a line to start off
 			fileChannel.position(0); // Set at start of the file
 			
-			int chromosomeCounter = 1; // Counter to track chromosomes
+			int individualCounter = 1; // Counter to track individuals
 			
-			// Read each line (i.e a chromosome) and find first instance of an unassigned
+			// Read each line (i.e a individual) and find first instance of an unassigned
 			while(line != null) {
 				
 				String[] tokens = line.split("\\s+"); // Split on any number of whitespace
 				
 				// Check if chromosome is unassigned and if the chromosome hasn't already been assigned
-				if(tokens != null && tokens.length == UNASSIGNED && assignedChromosomeID < 1) {
+				if(tokens != null && tokens.length == UNASSIGNED && assignedIndividualID < 1) {
 					line += " A\n"; // Append an assigned token at end of 'line'
-					assignedChromosomeID = chromosomeCounter;
+					assignedIndividualID = individualCounter;
 					
-					// Construct the 'Chromosome' object from file data
-					assignedChromosome = new Chromosome(Integer.parseInt(tokens[0]), Double.parseDouble(tokens[1]),
+					// Construct the 'Individual' object from file data
+					assignedIndividual = new Individual(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]),
 													Double.parseDouble(tokens[2]), Double.parseDouble(tokens[3]),
-													Integer.parseInt(tokens[4]), Double.parseDouble(tokens[5]), 
-													Double.parseDouble(tokens[6]), Double.parseDouble(tokens[7]),
-													Integer.parseInt(tokens[8]), Double.parseDouble(tokens[9]));
+													Double.parseDouble(tokens[4]), Double.parseDouble(tokens[5]), 
+													Double.parseDouble(tokens[6]), Double.parseDouble(tokens[7]));
 				}
 				else { // Got to append a return line
 					line += "\n";
@@ -220,10 +221,10 @@ public class ChromosomeBookKeeper {
 				
 				fileChannel.write(ByteBuffer.wrap(line.getBytes()));
 				line = bufferedReader.readLine();
-				++chromosomeCounter;
+				++individualCounter;
 			}
 			
-			System.out.println("Chromosome assignment: " + assignedChromosomeID);
+			System.out.println("Individual assignment: " + assignedIndividualID);
 			
 			bufferedReader.close();
 			inputStream.close();
@@ -235,7 +236,7 @@ public class ChromosomeBookKeeper {
 	}
 	
 	/**
-	 * Method will assign a fitness to the <code>assignedChromosome</code>.
+	 * Method will assign a fitness to the <code>assignedIndividual</code>.
 	 * This will require the whole file to be re-written.
 	 * 
 	 * @param score	the score the agent recieved at the end of the game
@@ -243,7 +244,7 @@ public class ChromosomeBookKeeper {
 	public void assignFitness(double score) {
 		try {
 			// This is just a convention you have to follow if you want to make read and write synchronized
-			File file = new File(latestGeneration);
+			File file = new File(assignedGeneration);
 			RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"); // Open in read-write mode
 			FileChannel fileChannel = randomAccessFile.getChannel(); // Get fiel channel associated
 						
@@ -265,7 +266,7 @@ public class ChromosomeBookKeeper {
 			
 			while(line != null) {
 				
-				if(currentChromosome == assignedChromosomeID) {
+				if(currentChromosome == assignedIndividualID) {
 					line += " " + score + "\n";
 				}
 				else { // Got to append a return line
@@ -287,16 +288,16 @@ public class ChromosomeBookKeeper {
 	}
 	
 	/**
-	 * Method will check the <code>latestGeneration</code> file and 
-	 * if the file has all the chromosomes assigned a fitness score
+	 * Method will check the <code>assignedGeneration</code> file and 
+	 * if the file has all the individuals assigned a fitness score
 	 * then the algorithm will perform selection, mutation, and 
 	 * crossover.
 	 */
-	public void checkLatestGeneration() {
+	public void checkAssignedGeneration() {
 		
 		try {
 			// This is just a convention you have to follow if you want to make read and write synchronized
-			File file = new File(latestGeneration);
+			File file = new File(assignedGeneration);
 			RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"); // Open in read-write mode
 			FileChannel fileChannel = randomAccessFile.getChannel(); // Get fiel channel associated
 						
@@ -311,7 +312,7 @@ public class ChromosomeBookKeeper {
 						
 			InputStream inputStream = new ByteArrayInputStream(buffer.array()); // Put buffer into input stream
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream)); // Treat it like a normal file
-			String line = bufferedReader.readLine(); // Read a line to start off
+			// String line = bufferedReader.readLine(); // Read a line to start off
 			fileChannel.position(0); // Set at start of the file
 			
 			bufferedReader.close();
@@ -326,20 +327,61 @@ public class ChromosomeBookKeeper {
 	/**
 	 * Method retrieves the assigned chromosome
 	 * 
-	 * @return	a <code>Chromosome</code> object
+	 * @return	a <code>Individual</code> object
 	 */
-	public Chromosome getAssignedChromosome() {
-		return assignedChromosome;
+	public Individual getAssignedIndividual() {
+		return assignedIndividual;
 	}
 	
 	/**
 	 * Method will check if the book keeper instance has 
-	 * managed to get an unassigned chromosome
+	 * managed to get an unassigned individual
 	 * 
 	 * @return a <code>boolean</code> value that flags 
 	 * 			results
 	 */
 	public boolean isAssignedChromosome() {
-		return (assignedChromosome == null);
+		return (assignedIndividual == null);
+	}
+	
+	/**
+	 * Method will retrieve the list of all individuals in the 
+	 * lastest generation file.
+	 * 
+	 * @return
+	 */
+	public Individual[] getAllIndividuals() {
+		
+		Individual[] individuals = new Individual[POPULATION_COUNT];
+		
+		try {
+			// This is just a convention you have to follow if you want to make read and write synchronized
+			File file = new File(assignedGeneration);
+			RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"); // Open in read-write mode
+			FileChannel fileChannel = randomAccessFile.getChannel(); // Get fiel channel associated
+						
+			System.out.println("File Channel opened for read. Attempting to aquire lock (in blocking mode)...");
+			FileLock lock = fileChannel.lock(0, Long.MAX_VALUE, false);
+			System.out.println("Lock aquired... Preparing to read...");
+			System.out.println("Lock is shared: " + lock.isShared());
+						
+			byte[] byteArray = new byte[(int) randomAccessFile.length()]; // Allocate space for file data
+			ByteBuffer buffer = ByteBuffer.wrap(byteArray); // Put data into a buffer
+			fileChannel.read(buffer); // Read data from channel into buffer
+						
+			InputStream inputStream = new ByteArrayInputStream(buffer.array()); // Put buffer into input stream
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream)); // Treat it like a normal file
+			// String line = bufferedReader.readLine(); // Read a line to start off
+			fileChannel.position(0); // Set at start of the file
+			
+			bufferedReader.close();
+			inputStream.close();
+			randomAccessFile.close();
+		}
+		catch(IOException e) {
+			e.printStackTrace();
+		}
+		
+		return individuals;
 	}
 }
