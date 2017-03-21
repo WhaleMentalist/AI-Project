@@ -63,4 +63,12 @@ public class NavigationChromosome extends AbstractChromosome {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append(MAXIMUM_VELOCITY + " " + MINIMUM_VELOCITY + " " +
+						OBSTACLE_DETECTION_THRESHOLD);
+		return builder.toString();
+	}
 }

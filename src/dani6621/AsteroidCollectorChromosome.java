@@ -194,29 +194,29 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 		
 		// Below mutation result is checked
 		if(mutationResult[Alleles.ENERGY_REFUEL_THRESHOLD_INDEX.index]) {
-			energyThreshold = Utility.randomInteger(ChromosomeFactory.MIN_ENERGY_RANGE, 
-					ChromosomeFactory.MAX_ENERGY_RANGE);
+			energyThreshold = Utility.randomInteger(IndividualFactory.MIN_ENERGY_RANGE, 
+					IndividualFactory.MAX_ENERGY_RANGE);
 		}
 		
 		if(mutationResult[Alleles.CARGOHOLD_CAPACITY_INDEX.index]) {
-			cargoholdCapacity = Utility.randomInteger(ChromosomeFactory.MIN_CARGOHOLD_RANGE, 
-					ChromosomeFactory.MAX_CARGOHOLD_RANGE);
+			cargoholdCapacity = Utility.randomInteger(IndividualFactory.MIN_CARGOHOLD_RANGE, 
+					IndividualFactory.MAX_CARGOHOLD_RANGE);
 		}
 		
 		if(mutationResult[Alleles.MAXIMUM_DISTANCE_ASTEROID_INDEX.index]) {
-			maximumDistanceAsteroid = Utility.randomDouble(ChromosomeFactory.MIN_DISTANCE_TO_ASTEROID_RANGE, 
-					ChromosomeFactory.MAX_DISTANCE_TO_ASTEROID_RANGE);
+			maximumDistanceAsteroid = Utility.randomDouble(IndividualFactory.MIN_DISTANCE_TO_ASTEROID_RANGE, 
+					IndividualFactory.MAX_DISTANCE_TO_ASTEROID_RANGE);
 		}
 		
 		if(mutationResult[Alleles.ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD_INDEX.index]) {
 			asteroidDistanceVsResourceRatio = 
-					Utility.randomDouble(ChromosomeFactory.MIN_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE, 
-					ChromosomeFactory.MAX_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE);
+					Utility.randomDouble(IndividualFactory.MIN_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE, 
+					IndividualFactory.MAX_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE);
 		}
 		
 		if(mutationResult[Alleles.ANGLE_WEIGHT.index]) {
-			angleWeight = Utility.randomDouble(ChromosomeFactory.MIN_ANGLE_WEIGHT_RANGE, 
-					ChromosomeFactory.MAX_ANGLE_WEIGHT_RANGE);
+			angleWeight = Utility.randomDouble(IndividualFactory.MIN_ANGLE_WEIGHT_RANGE, 
+					IndividualFactory.MAX_ANGLE_WEIGHT_RANGE);
 		}
 		
 		// Construct new chromosome (this is due to immutable implementation)
@@ -237,5 +237,14 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 	 */
 	public double getFitnessScore() {
 		return fitnessScore;
+	}
+	
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append(ENERGY_REFUEL_THRESHOLD + " " + CARGOHOLD_CAPACITY + " " +
+						MAXIMUM_DISTANCE_ASTEROID + " " + ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD + " " +
+						ANGLE_WEIGHT);
+		return builder.toString();
 	}
 }

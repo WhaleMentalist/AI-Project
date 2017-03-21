@@ -2,10 +2,11 @@ package dani6621;
 
 /**
  * The class is a design concept that encapsulates the production of a 
- * chromosome. It will be useful for generating the initial population for the
- * genetic algorithm
+ * individuals. It will be useful for generating the initial population for the
+ * genetic algorithm. This will create the individual with random data (i.e uniform
+ * distribution of randomness)
  */
-public class ChromosomeFactory {
+public class IndividualFactory {
 	
 	/**
 	 * Maximum range for energy threshold constant when generating
@@ -134,47 +135,40 @@ public class ChromosomeFactory {
 	public static final double MAX_ANGLE_WEIGHT_RANGE = 20.0;
 	
 	/**
-	 * Method will create <code>AbstractChromosome</code> of the type
-	 * passed as parameter
+	 * Method will create <code>Individual</code>
 	 * 
-	 * @param chromosomeType	the type of chromosome to be created
-	 * @return	the created chromosome
+	 * @return	the created individual
 	 */
-	public static AbstractChromosome createChromosome(String chromosomeType) {
+	public static Individual createIndividual() {
 		
-		AbstractChromosome chromosome = null;
+		AsteroidCollectorChromosome asteroidCollector;
+		NavigationChromosome navigation;
 		
-		if(chromosomeType.equals("ASTEROIDCOLLECTOR")) {
-			int energyThreshold = Utility.randomInteger(MIN_ENERGY_RANGE, MAX_ENERGY_RANGE);
-			int cargoholdCapacity = Utility.randomInteger(MIN_CARGOHOLD_RANGE, MAX_CARGOHOLD_RANGE);
-			double maximumDistanceToAsteroid = Utility.randomDouble(MIN_DISTANCE_TO_ASTEROID_RANGE, 
-																	MAX_DISTANCE_TO_ASTEROID_RANGE);
-			double asteroidResourceDistanceRatioThreshold = Utility.randomDouble(MIN_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE, 
-																				MAX_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE);
-			double angleWeight = Utility.randomDouble(MIN_ANGLE_WEIGHT_RANGE, MAX_ANGLE_WEIGHT_RANGE);
+		int energyThreshold = Utility.randomInteger(MIN_ENERGY_RANGE, MAX_ENERGY_RANGE);
+		int cargoholdCapacity = Utility.randomInteger(MIN_CARGOHOLD_RANGE, MAX_CARGOHOLD_RANGE);
+		double maximumDistanceToAsteroid = Utility.randomDouble(MIN_DISTANCE_TO_ASTEROID_RANGE, 
+																MAX_DISTANCE_TO_ASTEROID_RANGE);
+		double asteroidResourceDistanceRatioThreshold = 
+								Utility.randomDouble(MIN_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE, 
+													MAX_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE);
+		double angleWeight = Utility.randomDouble(MIN_ANGLE_WEIGHT_RANGE, MAX_ANGLE_WEIGHT_RANGE);
 			
-			chromosome =  new AsteroidCollectorChromosome(energyThreshold, cargoholdCapacity, 
-					maximumDistanceToAsteroid, asteroidResourceDistanceRatioThreshold, angleWeight);
-		}
-		else if(chromosomeType.equals("NAVIGATION")) {
-			double obstacleDetectionThreshold = Utility.randomDouble(MIN_OBSTACLE_DETECTION_RANGE, MAX_OBSTACLE_DETECTION_RANGE);
-			double maximumVelocity = Utility.randomDouble(MIN_MAX_VELOCITY_RANGE, MAX_MAX_VELOCITY_RANGE);
-			double minimumVelocity = Utility.randomDouble(MIN_MIN_VELOCITY_RANGE, MAX_MIN_VELOCITY_RANGE);
-			
-			// Check if minimum velocity is larger or within too close range
-			if(minimumVelocity > (maximumVelocity * VELOCITIES_TOO_CLOSE_MULTIPLIER)) {
-				minimumVelocity = maximumVelocity * VELOCITIES_TOO_CLOSE_MULTIPLIER; // Lower minimum velocity to 80% of max velocity
-			}
-			
-			chromosome = new NavigationChromosome(maximumVelocity, minimumVelocity, obstacleDetectionThreshold);
-		}
-		else {
-			/*
-			double baseBuildDistanceThreshold = Utility.randomDouble(MIN_BASE_BUILD_DISTANCE_RANGE, MAX_BASE_BUILD_DISTANCE_RANGE);
-			int maximumShipNumber = Utility.randomInteger(MIN_SHIP_COUNT_RANGE, MAX_SHIP_COUNT_RANGE);
-			*/
-		}
+		asteroidCollector =  new AsteroidCollectorChromosome(energyThreshold, cargoholdCapacity, 
+				maximumDistanceToAsteroid, asteroidResourceDistanceRatioThreshold, angleWeight);
 		
-		return chromosome;
+
+		double obstacleDetectionThreshold = Utility.randomDouble(MIN_OBSTACLE_DETECTION_RANGE, 
+																MAX_OBSTACLE_DETECTION_RANGE);
+		double maximumVelocity = Utility.randomDouble(MIN_MAX_VELOCITY_RANGE, MAX_MAX_VELOCITY_RANGE);
+		double minimumVelocity = Utility.randomDouble(MIN_MIN_VELOCITY_RANGE, MAX_MIN_VELOCITY_RANGE);
+			
+		// Check if minimum velocity is larger or within too close range
+		if(minimumVelocity > (maximumVelocity * VELOCITIES_TOO_CLOSE_MULTIPLIER)) {
+			minimumVelocity = maximumVelocity * VELOCITIES_TOO_CLOSE_MULTIPLIER; // Lower minimum velocity to 80% of max velocity
+		}
+			
+		navigation = new NavigationChromosome(maximumVelocity, minimumVelocity, obstacleDetectionThreshold);
+		
+		return new Individual(asteroidCollector, navigation);
 	}
 }
