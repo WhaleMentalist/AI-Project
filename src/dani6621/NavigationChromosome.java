@@ -39,9 +39,21 @@ public class NavigationChromosome extends AbstractChromosome {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	@Override
+	protected AbstractChromosome crossoverHelper(AbstractChromosome parentTwo, int crossoverPoint) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 	@Override
 	public AbstractChromosome mutation() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	@Override
+	protected AbstractChromosome mutationHelper(boolean[] mutationResult) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -51,5 +63,4 @@ public class NavigationChromosome extends AbstractChromosome {
 		// TODO Auto-generated method stub
 		
 	}
-
 }

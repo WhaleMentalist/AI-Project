@@ -27,7 +27,12 @@ public class ChromosomeBookKeeper {
 	 * This is the amount of chromosomes that will be produced 
 	 * in each generation
 	 */
-	private static final int POPULATION_COUNT = 100;
+	public static final int POPULATION_COUNT = 100;
+	
+	/**
+	 * Constant used to ensure proper chromosome made in factory
+	 */
+	private static final String ASTEROID_COLLECTOR_STRING = "ASTEROIDCOLLECTOR";
 	
 	/**
 	 * Variable will help cut extension off the file name
@@ -149,7 +154,9 @@ public class ChromosomeBookKeeper {
 				System.out.println("Lock is shared: " + lock.isShared());
 				
 				for(int i = 0; i < POPULATION_COUNT; ++i) {
-					fileChannel.write(ByteBuffer.wrap(ChromosomeFactory.createChromosome().toString().getBytes()));
+					fileChannel.write(ByteBuffer.
+							wrap(ChromosomeFactory.createChromosome(ASTEROID_COLLECTOR_STRING).
+							toString().getBytes()));
 				}
 				
 				outputStream.close(); // Close stream (also closes associated channel)... Also it releases the lock

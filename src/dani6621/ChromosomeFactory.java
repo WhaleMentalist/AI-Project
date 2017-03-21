@@ -134,9 +134,11 @@ public class ChromosomeFactory {
 	public static final double MAX_ANGLE_WEIGHT_RANGE = 20.0;
 	
 	/**
+	 * Method will create <code>AbstractChromosome</code> of the type
+	 * passed as parameter
 	 * 
-	 * @param chromosomeType
-	 * @return
+	 * @param chromosomeType	the type of chromosome to be created
+	 * @return	the created chromosome
 	 */
 	public static AbstractChromosome createChromosome(String chromosomeType) {
 		

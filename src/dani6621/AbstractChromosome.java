@@ -44,6 +44,17 @@ public abstract class AbstractChromosome {
 	public abstract AbstractChromosome crossover(AbstractChromosome chromosome);
 	
 	/**
+	 * Help method will implement crossover arithmetic and keep 
+	 * <code>crossover</code> method cleaner 
+	 * 
+	 * @param parentTwo the second parent
+	 * @param crossoverPoint	the crossover point when exhanging alleles
+	 * 
+	 * @return	a child chromosome as a result of the crossover
+	 */
+	protected abstract AbstractChromosome crossoverHelper(AbstractChromosome parentTwo, int crossoverPoint);
+	
+	/**
 	 * Method will take instance of <code>AbstractChromosome</code> and perform
 	 * mutation
 	 * 
@@ -53,7 +64,15 @@ public abstract class AbstractChromosome {
 	public abstract AbstractChromosome mutation();
 	
 	/**
+	 * Method will help to mutate correct data members as mapped by the parameter passed
 	 * 
+	 * @param mutationResult	the values of mutation results
+	 * @return	a new chromosome that may OR may NOT be mutated
+	 */
+	protected abstract AbstractChromosome mutationHelper(boolean[] mutationResult);
+	
+	/**
+	 * Calculates the fitness for the chromosome
 	 */
 	public abstract void fitness();
 }

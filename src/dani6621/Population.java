@@ -1,6 +1,4 @@
-import dani6621.AbstractChromosome;
-import dani6621.Utility;
-
+package dani6621;
 /**
  * All classes of type <code>Population</code>
  * will extend this class. It will contain functionality 
