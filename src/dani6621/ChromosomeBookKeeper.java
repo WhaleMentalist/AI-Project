@@ -342,4 +342,39 @@ public class ChromosomeBookKeeper {
 	public boolean isAssignedChromosome() {
 		return (assignedChromosome == null);
 	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public AbstractChromosome[] getAllChromosome() {
+		
+		try {
+			// This is just a convention you have to follow if you want to make read and write synchronized
+			File file = new File(latestGeneration);
+			RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"); // Open in read-write mode
+			FileChannel fileChannel = randomAccessFile.getChannel(); // Get fiel channel associated
+						
+			System.out.println("File Channel opened for read. Attempting to aquire lock (in blocking mode)...");
+			FileLock lock = fileChannel.lock(0, Long.MAX_VALUE, false);
+			System.out.println("Lock aquired... Preparing to read...");
+			System.out.println("Lock is shared: " + lock.isShared());
+						
+			byte[] byteArray = new byte[(int) randomAccessFile.length()]; // Allocate space for file data
+			ByteBuffer buffer = ByteBuffer.wrap(byteArray); // Put data into a buffer
+			fileChannel.read(buffer); // Read data from channel into buffer
+						
+			InputStream inputStream = new ByteArrayInputStream(buffer.array()); // Put buffer into input stream
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream)); // Treat it like a normal file
+			String line = bufferedReader.readLine(); // Read a line to start off
+			fileChannel.position(0); // Set at start of the file
+			
+			bufferedReader.close();
+			inputStream.close();
+			randomAccessFile.close();
+		}
+		catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
 }
