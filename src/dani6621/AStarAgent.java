@@ -33,7 +33,7 @@ public class AStarAgent extends TeamClient {
 	/**
 	 * Error code for lack of chromosome assignment
 	 */
-	private static final int CHROMOSOME_ASSIGNMENT_FAILURE = 1;
+	private static final int CHROMOSOME_ASSIGNMENT_FAILURE = -1;
 	
 	/**
 	 * Number of retries at forming contingency plan
@@ -84,6 +84,12 @@ public class AStarAgent extends TeamClient {
      * 			list of objects.
      */
     private Map<UUID, AbstractObject> unapproachableObject;
+    
+    /**
+     * The individual containing the chromosomes that 
+     * govern the agent's actions
+     */
+    private Individual assignedIndividual;
 
     /**
      * Assigns ships to asteroids and beacons, as described above
@@ -114,9 +120,10 @@ public class AStarAgent extends TeamClient {
      */
     public AbstractAction getReflexAgentAction(Toroidal2DPhysics space, Ship ship) {
         AbstractAction newAction = new DoNothingAction();
-        perceive(space, ship);
+        perceive(space, ship, assignedIndividual);
         
-        if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
+        if(knowledge.getCurrentEnergy() < assignedIndividual.
+        		asteroidCollectorChromosome.ENERGY_REFUEL_THRESHOLD) { // Get energy when low
             AbstractObject source = knowledge.getClosestEnergySource(unapproachableObject);
 
             if(source == null) { // Didn't find a source
@@ -156,7 +163,8 @@ public class AStarAgent extends TeamClient {
             	}
             }
         }
-        else if(ship.getResources().getTotal() > WorldState.FULL_CARGO) { // Detect full cargo
+        else if(ship.getResources().getTotal() > assignedIndividual.
+        		asteroidCollectorChromosome.CARGOHOLD_CAPACITY) { // Detect full cargo
             Base closestBase = knowledge.getClosestFriendlyBase(unapproachableObject);
             
             if(closestBase != null) { // Goto base that was found
@@ -241,9 +249,11 @@ public class AStarAgent extends TeamClient {
      * with data about its percepts
      *
      * @param space the object that contains environment agent will perceive
+     * @param ship reference to ship
+     * @param individual	the individual assigned to agent
      */
-    private void perceive(Toroidal2DPhysics space, Ship ship) {
-        knowledge = new WorldState(space, ship);
+    private void perceive(Toroidal2DPhysics space, Ship ship, Individual individual) {
+        knowledge = new WorldState(space, ship, individual);
     }
     
     /**
@@ -265,13 +275,15 @@ public class AStarAgent extends TeamClient {
     	navigator = new Navigator();
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
     	
-    	// The 'ChromosomeBookKeeper' is much like a librarian with books
+    	// The 'IndividualBookKeeper' is much like a librarian with books
     	bookKeeper = new IndividualBookKeeper(); // Need to issue a request for data
     	
     	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
-    	if(bookKeeper.isAssignedChromosome()) {
+    	if(!(bookKeeper.isAssignedChromosome())) {
     		System.exit(CHROMOSOME_ASSIGNMENT_FAILURE); // Terminate JVM process
     	}
+    	
+    	assignedIndividual = bookKeeper.getAssignedIndividual(); // Get the assigned individual
     }
     
     /**

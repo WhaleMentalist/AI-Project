@@ -441,7 +441,7 @@ public class IndividualBookKeeper {
 	 * 			results
 	 */
 	public boolean isAssignedChromosome() {
-		return (assignedIndividual == null);
+		return (assignedIndividual != null);
 	}
 	
 	/**
