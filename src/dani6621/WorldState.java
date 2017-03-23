@@ -19,16 +19,6 @@ import spacesettlers.utilities.Vector2D;
 public class WorldState {
 
     /**
-     * Constant helps identify a low energy threshold
-     */
-    public static final double LOW_ENERGY = Ship.SHIP_MAX_ENERGY / 2.0;
-
-    /**
-     * Constant helps to delimit return to base
-     */
-    public static final int FULL_CARGO = 4000;
-
-    /**
      * If a maximum velocity is imposed the agent has better
      * control
      */
@@ -49,6 +39,12 @@ public class WorldState {
      * as max amount (i.e two seconds later in simulation)
      */
     public static final double MAX_LOOK_AHEAD = 80;
+    
+    /**
+	 * The individual that was assigned to agent containing the values that 
+	 * will govern the agent. It will be set once in the ladder.
+	 */
+	public final Individual individual;
 
     /**
      * Simply a reference to use some of the functions (i.e shortest distance, obstructions)
@@ -67,10 +63,12 @@ public class WorldState {
      *
      * @param space a reference to simulation containing objects
      * @param ship  the ship belonging to agent
+     * @param ind	the individual assigned to the ship
      */
-    public WorldState(Toroidal2DPhysics space, Ship ship) {
+    public WorldState(Toroidal2DPhysics space, Ship ship, Individual ind) {
         _space = space;
         _referenceShip = ship;
+        individual = ind;
     }
 
     /**
@@ -217,8 +215,14 @@ public class WorldState {
             dist = _space.findShortestDistance(shipPos, asteroid.getPosition());
             toAsteroid = _space.findShortestDistanceVector(shipPos, asteroid.getPosition()); // Get vector pointing from ship to asteroid
             angleBetween = pathOfShip.angleBetween(toAsteroid); // Get angle between asteroid and ship velocity
-            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist * (1.0 + Math.pow(angleBetween, 2.0))); // Cost effectiveness calculation
-            if (currentCostEffectiveness > costEffectiveness) { // Check if asteroid closer to ship and clear of obstructions
+            
+            // Angle the ship velocity to target asteroid also adds to cost as angle increases
+            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist * (1.0 + Math.pow(angleBetween, 
+            									individual.asteroidCollectorChromosome.ANGLE_WEIGHT)));
+            
+            if (currentCostEffectiveness > costEffectiveness &&
+            		dist < individual.asteroidCollectorChromosome.
+            		MAXIMUM_DISTANCE_ASTEROID) { // Check if asteroid closer to ship and clear of obstructions
                 costEffectiveness = currentCostEffectiveness; // Reassign shortest distance
                 candidate = asteroid;
             }

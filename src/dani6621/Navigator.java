@@ -99,8 +99,8 @@ public class Navigator {
 					knowledge.calculateInterceptVelocity(goalObject));
 		}
 		
-		// Check if the current path is empty
-		if(!(path.isEmpty())) {
+		// Check if the current path is empty or no path formed at all
+		if(path != null && !(path.isEmpty())) {
 			
 			if(currentTargetNode == null) { // Assign a new node
 				currentTargetNode = path.pop();
