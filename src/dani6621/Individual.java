@@ -22,6 +22,11 @@ public class Individual {
 	public final NavigationChromosome navigationChromosome;
 	
 	/**
+	 * The fitness score the indivdual recieved
+	 */
+	private double fitnessScore;
+	
+	/**
 	 * Basic constructor that initializes the <code>Individual</code>
 	 * instance
 	 * 
@@ -52,6 +57,46 @@ public class Individual {
 		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, maximumDistanceAsteroid, 
 																	asteroidDistanceResourceRatio, angleWeight);
 		navigationChromosome = new NavigationChromosome(maxVelocity, minVelocity, obstacleDetection);
+	}
+	
+	/**
+	 * Constructor that will pass parameters pertaining to the alleles of each chromosome.
+	 * 
+	 * @param energyRefuelThreshold	the amount of fuel before ship needs to find fuel source
+	 * @param cargoholdCapcacity	the amount of resources in cargohold before going back to base
+	 * @param maximumDistanceAsteroid	the maximum distance to consider an asteroid as a candidate
+	 * @param asteroidDistanceResourceRatio	the ratio required to consider an asteroid as a candidate
+	 * @param angleWeight	the weight the angle will have when considering an asteroid in some orientation from ship
+	 * @param maxVelocity	the maximum velocity of ship
+	 * @param minVelocity	the minimum pursuit velocity of ship
+	 * @param obstacleDetection	the range when obstacles are detected by path finding algorithm
+	 * @param fitness	the fitness score the individual recieved
+	 */
+	public Individual(int energyRefuelThreshold, int cargoholdCapcacity, double maximumDistanceAsteroid, 
+			double asteroidDistanceResourceRatio, double angleWeight, double maxVelocity, double minVelocity, 
+			double obstacleDetection, double fitness) {
+		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, maximumDistanceAsteroid, 
+																	asteroidDistanceResourceRatio, angleWeight);
+		navigationChromosome = new NavigationChromosome(maxVelocity, minVelocity, obstacleDetection);
+		fitnessScore = fitness;
+	}
+	
+	/**
+	 * Method will retrieve value of fitness score
+	 * 
+	 * @return	a the fitness value
+	 */
+	public double getFitnessScore() {
+		return fitnessScore;
+	}
+	
+	/**
+	 * Method will set the fitness score for the individual
+	 * 
+	 * @param score	the score that will be set
+	 */
+	public void setFitnessScore(double score) {
+		fitnessScore = score;
 	}
 	
 	@Override

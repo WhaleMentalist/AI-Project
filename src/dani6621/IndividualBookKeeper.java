@@ -27,12 +27,17 @@ public class IndividualBookKeeper {
 	 * This is the amount of chromosomes that will be produced 
 	 * in each generation
 	 */
-	public static final int POPULATION_COUNT = 100;
+	public static final int POPULATION_COUNT = 6;
+	
+	/**
+	 * The file extension for knowlodge files
+	 */
+	private static final String EXTENSION = ".txt";
 	
 	/**
 	 * Variable will help cut extension off the file name
 	 */
-	private static final int EXTENSION_CUTOFF = 4;
+	private static final int EXTENSION_CUTOFF = EXTENSION.length();
 	
 	/**
 	 * Variable holds name of directory containing knowledge files
@@ -45,19 +50,24 @@ public class IndividualBookKeeper {
 	private static final String KNOWLEDGE_FILE_BASE_NAME = "generation";
 	
 	/**
-	 * The file extension for knowlodge files
-	 */
-	private static final String EXTENSION = ".txt";
-	
-	/**
-	 * Number of tokens for unassigned chromosome
+	 * Number of tokens for unassigned individual
 	 */
 	private static final int UNASSIGNED = 8;
+	
+	/**
+	 * Number of tokens for individual assigned a score
+	 */
+	private static final int SCORE_ASSIGNED = 10;
 	
 	/**
 	 * Holds the path to file holding assigned generation
 	 */
 	private String assignedGeneration;
+	
+	/**
+	 * Holds the generation number the book keeper is on
+	 */
+	private int assignedGenerationNumber;
 	
 	/**
 	 * Hold the individual that was assigned. It will correspond to a 
@@ -75,10 +85,11 @@ public class IndividualBookKeeper {
 	 */
 	public IndividualBookKeeper() {
 		assignedGeneration = "";
+		assignedGenerationNumber = -1;
 		assignedIndividualID = -1;
 		assignedIndividual = null;
 		initialize(); // Always run initialization to check existance and/or prepare file structure
-		assignIndividual(); // Attempt to assign chromosome
+		assignIndividual(); // Attempt to assign individual
 	}
 	
 	/**
@@ -103,7 +114,6 @@ public class IndividualBookKeeper {
 		String filePath = ""; // Path to file
 		String fileName = ""; // Name of the file
 		int generationNumber = -1; // Hold current generation number, if found, for comparison
-		int latestGenerationNumber = -1; // Hold latest generation found
 		
 		for(File file : files) {
 			filePath = file.getAbsolutePath(); // Get path of 'file'
@@ -122,21 +132,22 @@ public class IndividualBookKeeper {
 				
 				
 				// If we find an even later generation value
-				if(generationNumber > latestGenerationNumber) {
-					latestGenerationNumber = generationNumber;
+				if(generationNumber > assignedGenerationNumber) {
+					assignedGenerationNumber = generationNumber;
 					assignedGeneration = filePath; // Set data member to value
 				}
 			}
 		}
 		
 		// If we never found a file, then we need to initialize the initial population
-		if(assignedGeneration.equals("")) {
+		if(assignedGeneration.equals("") && assignedGenerationNumber == -1) {
 			
 			System.out.println("No population file found... Creating initial population...");
 			
 			// Create path to initial file we will create - notice it uses '0' for first generation
-			assignedGeneration = new String(projectPath.toString() + KNOWLEDGE_DIRECTORY_NAME + KNOWLEDGE_FILE_BASE_NAME + "0" +
-											EXTENSION);
+			assignedGenerationNumber = 0;
+			assignedGeneration = new String(projectPath.toString() + KNOWLEDGE_DIRECTORY_NAME + KNOWLEDGE_FILE_BASE_NAME + 
+										assignedGenerationNumber + EXTENSION);
 			
 			try {
 				// Open for writing
@@ -240,14 +251,17 @@ public class IndividualBookKeeper {
 	 * This will require the whole file to be re-written.
 	 * 
 	 * @param score	the score the agent recieved at the end of the game
+	 * @param damageRecieved	the amount of damage the agent recieved
 	 */
-	public void assignFitness(double score) {
+	public void assignFitness(double score, double damageRecieved) {
+		
 		try {
 			// This is just a convention you have to follow if you want to make read and write synchronized
 			File file = new File(assignedGeneration);
 			RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"); // Open in read-write mode
 			FileChannel fileChannel = randomAccessFile.getChannel(); // Get fiel channel associated
-						
+			
+			System.out.println("From 'assignFitness' function...");
 			System.out.println("File Channel opened for read. Attempting to aquire lock (in blocking mode)...");
 			FileLock lock = fileChannel.lock(0, Long.MAX_VALUE, false);
 			System.out.println("Lock aquired... Preparing to read...");
@@ -263,11 +277,16 @@ public class IndividualBookKeeper {
 			fileChannel.position(0); // Set at start of the file
 			
 			int currentChromosome = 1;
+			double totalFitness;
 			
 			while(line != null) {
 				
 				if(currentChromosome == assignedIndividualID) {
-					line += " " + score + "\n";
+					assignedIndividual.asteroidCollectorChromosome.calculateFitness(score);
+					assignedIndividual.navigationChromosome.calculateFitness(score, damageRecieved);
+					totalFitness = assignedIndividual.asteroidCollectorChromosome.getFitnessScore() +
+										assignedIndividual.navigationChromosome.getFitnessScore();
+					line += " " + totalFitness + "\n";
 				}
 				else { // Got to append a return line
 					line += "\n";
@@ -277,6 +296,8 @@ public class IndividualBookKeeper {
 				line = bufferedReader.readLine();
 				++currentChromosome;
 			}
+			
+			System.out.println("Finished assigning fitness...");
 			
 			bufferedReader.close();
 			inputStream.close();
@@ -299,8 +320,9 @@ public class IndividualBookKeeper {
 			// This is just a convention you have to follow if you want to make read and write synchronized
 			File file = new File(assignedGeneration);
 			RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"); // Open in read-write mode
-			FileChannel fileChannel = randomAccessFile.getChannel(); // Get fiel channel associated
-						
+			FileChannel fileChannel = randomAccessFile.getChannel(); // Get file channel associated
+			
+			System.out.println("From 'checkAssignedGeneration' function...");
 			System.out.println("File Channel opened for read. Attempting to aquire lock (in blocking mode)...");
 			FileLock lock = fileChannel.lock(0, Long.MAX_VALUE, false);
 			System.out.println("Lock aquired... Preparing to read...");
@@ -312,14 +334,92 @@ public class IndividualBookKeeper {
 						
 			InputStream inputStream = new ByteArrayInputStream(buffer.array()); // Put buffer into input stream
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream)); // Treat it like a normal file
-			// String line = bufferedReader.readLine(); // Read a line to start off
-			fileChannel.position(0); // Set at start of the file
+			String line = bufferedReader.readLine(); // Read a line to start off
+			boolean allAssigned = true; // Assume all values assigned, but we check
+			String[] tokens; // Hold tokens of line
+			
+			Individual[] individuals = new Individual[POPULATION_COUNT]; // Allocate for storage of current generation
+			int individualCounter = 0; // Keep track of where we are at in file and for indexing
+			
+			// Go to the end of the file
+			while(line != null) {
+				tokens = line.split("\\s+"); // Split on any number of whitespace
+				
+				if(tokens != null && tokens.length != SCORE_ASSIGNED) {
+					allAssigned = false;
+					break; // Found instance that is not assigned we can stop
+				}
+				
+				// Create individual from file data
+				individuals[individualCounter] = new Individual(Integer.parseInt(tokens[0]), 
+						Integer.parseInt(tokens[1]), Double.parseDouble(tokens[2]), 
+						Double.parseDouble(tokens[3]), Double.parseDouble(tokens[4]), 
+						Double.parseDouble(tokens[5]), Double.parseDouble(tokens[6]), 
+						Double.parseDouble(tokens[7]), Double.parseDouble(tokens[9]));
+				
+				line = bufferedReader.readLine(); // Read next line
+				++individualCounter;
+			}
+			
+			System.out.println("Check complete...");
+			
+			// We need to create a new generation
+			if(allAssigned) {
+				
+				// Construct population objects to perform genetic algorithm calculations
+				Population currentGeneration = new Population(individuals);
+				createNextGeneration(currentGeneration);
+			}
 			
 			bufferedReader.close();
 			inputStream.close();
 			randomAccessFile.close();
 		}
 		catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Method will create next generation and write them to a file
+	 * 
+	 * @param currentGeneration	the population containing individuals to breed
+	 */
+	public void createNextGeneration(Population currentGeneration) {
+		
+		Individual[] nextGeneration = currentGeneration.createNextGeneration(); // Making babies
+		String newGeneration; // Store path
+		int newGenerationNumber = assignedGenerationNumber + 1; // Create next number using current data
+		
+		// Retrieve project base path
+		Path projectPath = Paths.get("").toAbsolutePath().getParent();
+		
+		// Create path to new generation file
+		newGeneration = new String(projectPath.toString() + KNOWLEDGE_DIRECTORY_NAME + KNOWLEDGE_FILE_BASE_NAME + 
+									newGenerationNumber + EXTENSION);
+		
+		System.out.println("Creating next generation... Using directory: " + newGeneration);
+		
+		try {
+			// Open for writing
+			FileOutputStream outputStream = new FileOutputStream(new File(newGeneration), false);
+			FileChannel fileChannel = outputStream.getChannel();
+			
+			System.out.println("File Channel opened for write. Attempting to aquire lock (in blocking mode)...");
+			FileLock lock = fileChannel.lock(0, Long.MAX_VALUE, false); // Lock whole file... No shared lock...
+			System.out.println("Lock aquired... Preparing to write...");
+			System.out.println("Lock is shared: " + lock.isShared());
+			
+			// Write new generation in file
+			for(int i = 0; i < POPULATION_COUNT; ++i) {
+				fileChannel.write(ByteBuffer.
+						wrap(nextGeneration[i].toString().getBytes()));
+			}
+			
+			outputStream.close(); // Close stream (also closes associated channel)... Also it releases the lock
+			System.out.println("Population creation complete...");
+		} 
+		catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -371,7 +471,18 @@ public class IndividualBookKeeper {
 						
 			InputStream inputStream = new ByteArrayInputStream(buffer.array()); // Put buffer into input stream
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream)); // Treat it like a normal file
-			// String line = bufferedReader.readLine(); // Read a line to start off
+			String line = bufferedReader.readLine(); // Read a line to start off
+			
+			// Go to the end of the file
+			while(line != null) {
+				String[] tokens = line.split("\\s+"); // Split on any number of whitespace
+				
+				// Make sure we got tokens and are of sufficient length
+				if(tokens != null && tokens.length == SCORE_ASSIGNED) {
+					
+				}
+			}
+ 			
 			fileChannel.position(0); // Set at start of the file
 			
 			bufferedReader.close();

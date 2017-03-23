@@ -276,19 +276,22 @@ public class AStarAgent extends TeamClient {
     
     /**
      * Method will perform set of operations at game shutdown...
-     * Basically, the genetic algorithm cleanup and calculations
+     * Basically, the genetic algorithm cleanup and calculations for 
+     * fitness and generation creation
      */
     @Override
     public void shutDown(Toroidal2DPhysics space) {
-    	
-    	double totalScore = 0;
+    	double totalScore = 0.0;
+    	double damageRecieved = 0.0;
     	
     	for(ImmutableTeamInfo info : space.getTeamInfo()) {
     		if(info.getTeamName().equals("Padawan Daniel and Flood")) {
     			totalScore = info.getScore();
+    			damageRecieved = info.getTotalDamageReceived();
     		}
     	}
-    	bookKeeper.assignFitness(totalScore);
+    	bookKeeper.assignFitness(totalScore, damageRecieved); // Assign fitness score to the assigned individual
+    	bookKeeper.checkAssignedGeneration(); // Check if new generation needs to be created
     }
     
     /**

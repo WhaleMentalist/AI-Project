@@ -1,11 +1,16 @@
 package dani6621;
 /**
- * All classes of type <code>Population</code>
- * will extend this class. It will contain functionality 
- * neccessary for the genetic algorithm
+ * All classes of type <code>Population</code> that helps with
+ * organizing the data for genetic algorithm calculations. It will
+ * contain <code>Individual</code> objects in a collection.
  *
  */
-public abstract class Population {
+public class Population {
+	
+	/**
+	 * The individuals in the population
+	 */
+	private Individual[] population;
 	
 	/**
 	 * Used when generating parents to crossover
@@ -13,9 +18,14 @@ public abstract class Population {
 	private static final int PAIR = 2;
 	
 	/**
-	 * The population in the file (i.e generation)
+	 * Index location of first parent
 	 */
-	private AbstractChromosome[] population;
+	private static final int FIRST_PARENT = 0;
+	
+	/**
+	 * Index location of second parent
+	 */
+	private static final int SECOND_PARENT = 1;
 	
 	/**
 	 * The sum of the fitness score for population
@@ -23,64 +33,100 @@ public abstract class Population {
 	private double sumTotalScore;
 	
 	/**
-	 * Initialize population with an array of chromosomes
-	 * 
-	 * @param pop	the array of chromosomes that will be used 
-	 * 				for generation creation
+	 * Contains the weights for each of the individuals
 	 */
-	public Population(AbstractChromosome[] pop) {
+	private Double[] populationWeights;
+	
+	/**
+	 * Initialization constructor
+	 * 
+	 * @param pop	the population to operate on
+	 */
+	public Population(Individual[] pop) {
 		population = pop;
 		sumTotalScore = 0;
 		
-		for(AbstractChromosome chromosome : population) {
-			sumTotalScore += chromosome.fitnessScore;
+		for(Individual ind : population) {
+			System.out.println(ind.toString());
+			sumTotalScore += ind.getFitnessScore();
 		}
+		
+		populationWeights = populationWeights();
 	}
 	
 	/**
-	 * Generates weights for each of the chromosomes. 
+	 * Generates weights for each of the individuals. 
 	 * 
 	 * @return	an array of <code>Double</code> maps the 
 	 * 			probablity based on the fitness of the 
-	 * 			chromosome.
+	 * 			individuals.
 	 */
-	public Double[] populationWeights() {
+	private Double[] populationWeights() {
 		int populationSize = population.length;
-		double min = 0.0; // The minimum range value
-		Double[] weights = new Double[populationSize]; // Create 1-1 with chromosomes
+		double min = 0.0; // Minimum range so far
+		Double[] weights = new Double[populationSize];
 		
-		// Iterate through each chromosome
+		// Iterate through each individual
 		for(int i = 0; i < populationSize; ++i) {
-			weights[i] = min + (population[i].fitnessScore / sumTotalScore);
-			min = weights[i];
+			weights[i] = min + (population[i].getFitnessScore() / sumTotalScore);
+			min = weights[i]; // Set minimum to max of previous weight
 		}
 		
 		return weights;
 	}
 	
 	/**
-	 * The function will select two parent chromosomes for the cross over 
+	 * The function will select two parent individuals for the cross over 
 	 * that will occur.
 	 * 
 	 * @return an array of two elements containing the parents for cross over
 	 */
-	public AbstractChromosome[] selection() {
+	private Individual[] selection() {
 		int populationSize = population.length;
-		AbstractChromosome[] selected = new AbstractChromosome[PAIR];
-		Double[] weights = populationWeights(); // Get weights for chromosomes
+		Individual[] selected = new Individual[PAIR];
 		double prob;
 		
 		for(int i = 0; i < PAIR; ++i) {
-			prob = Utility.randomDouble(0.0, 1.0); // Using it because IT'S THERE
-			
+			prob = Utility.randomDouble(0.0, 1.0); // Using utility to produce range of random values (i.e uniform)
 			for(int j = 0; j < populationSize; ++j) { 
-				
-				if(prob < weights[j]) { // If probablity is less than upper bound then it is selected!
+				if(prob < populationWeights[j]) { // If probablity is less than upper bound then it is selected!
 					selected[i] = population[j];
 					break;
 				}
 			}
 		}
 		return selected;
+	}
+	
+	/**
+	 * Creates new population (i.e generation) for next iteration of 
+	 * genetic algorithm.
+	 * 
+	 * @return	the new generation
+	 */
+	public Individual[] createNextGeneration() {
+		int populationSize = population.length;
+		Individual[] newGeneration = new Individual[populationSize]; // Allocate space for new generation	
+		Individual[] selected; // The individuals selected for crossover
+		
+		// Declare variable to hold reference to newly created chromosome
+		AsteroidCollectorChromosome newAsteroidCollector;
+		NavigationChromosome newNavigation;
+		
+		// Fill next generation population
+		for(int i = 0; i < populationSize; ++i) {
+			selected = selection(); // Select two for crossover
+			
+			// Crossover chromosomes
+			newAsteroidCollector = (AsteroidCollectorChromosome) (selected[FIRST_PARENT].asteroidCollectorChromosome.
+										crossover(selected[SECOND_PARENT].asteroidCollectorChromosome)).mutation();
+			newNavigation = (NavigationChromosome) (selected[FIRST_PARENT].navigationChromosome.
+										crossover(selected[SECOND_PARENT].navigationChromosome)).mutation();
+			
+			// Create new individual from breeding
+			newGeneration[i] = new Individual(newAsteroidCollector, newNavigation); 
+		}
+		
+		return newGeneration;
 	}
 }

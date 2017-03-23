@@ -1,5 +1,9 @@
 package dani6621;
 
+/**
+ * 
+ *
+ */
 public class NavigationChromosome extends AbstractChromosome {
 	
 	/**
@@ -36,32 +40,32 @@ public class NavigationChromosome extends AbstractChromosome {
 
 	@Override
 	public AbstractChromosome crossover(AbstractChromosome chromosome) {
-		// TODO Auto-generated method stub
-		return null;
+		return this;
 	}
 	
 	@Override
 	protected AbstractChromosome crossoverHelper(AbstractChromosome parentTwo, int crossoverPoint) {
-		// TODO Auto-generated method stub
-		return null;
+		return this;
 	}
 
 	@Override
 	public AbstractChromosome mutation() {
-		// TODO Auto-generated method stub
-		return null;
+		return this;
 	}
 	
 	@Override
 	protected AbstractChromosome mutationHelper(boolean[] mutationResult) {
-		// TODO Auto-generated method stub
-		return null;
+		return this;
 	}
-
-	@Override
-	public void fitness() {
-		// TODO Auto-generated method stub
-		
+	
+	/**
+	 * Method will calculate the fitness of the chromosome
+	 * 
+	 * @param totalScore	the total score at end of game
+	 * @param damageRecieved	the damage the agent recieved at end of game
+	 */
+	public void calculateFitness(double totalScore, double damageRecieved) {
+		fitnessScore = 0; // Placeholder
 	}
 	
 	@Override

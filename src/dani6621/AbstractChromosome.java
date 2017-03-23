@@ -11,9 +11,9 @@ package dani6621;
 public abstract class AbstractChromosome {
 	
 	/**
-	 * The fitness value for the chromosome (i.e score at the end of the game)
+	 * The fitness value for the chromosome (i.e score at the end of the game or other attributes)
 	 */
-	public final double fitnessScore;
+	protected double fitnessScore;
 	
 	/**
 	 * Empty constructor
@@ -72,7 +72,11 @@ public abstract class AbstractChromosome {
 	protected abstract AbstractChromosome mutationHelper(boolean[] mutationResult);
 	
 	/**
-	 * Calculates the fitness for the chromosome
+	 * Method returns fitness score
+	 * 
+	 * @return	the fitness score 
 	 */
-	public abstract void fitness();
+	public double getFitnessScore() {
+		return fitnessScore;
+	}
 }

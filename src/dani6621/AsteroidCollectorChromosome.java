@@ -108,10 +108,12 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 	@Override
 	public AbstractChromosome crossover(AbstractChromosome chromosome) {
 		
+		System.out.println("In 'crossover' for 'AsteroidCollector'");
+		
 		AsteroidCollectorChromosome child = null;
 		
 		// Generate random crossover point (i.e better diversity)
-		int crossoverPoint = Utility.randomInteger(0, ALLELE_NUMBER - 1);
+		int crossoverPoint = Utility.randomInteger(0, ALLELE_NUMBER - 2);
 		child = (AsteroidCollectorChromosome) this.crossoverHelper(chromosome, crossoverPoint);
 
 		return child;
@@ -162,15 +164,18 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 	@Override
 	public AbstractChromosome mutation() {
 		
+		System.out.println("In 'mutation' for 'AsteroidCollector'");
+		
 		boolean[] mutationResult = new boolean[ALLELE_NUMBER];
 		double prob; // Produce probability to imitate mutation in nature
 		
 		// Iterate through each allele to attempt mutation
 		for(int i = 0; i < ALLELE_NUMBER; ++i) {
-			prob = Utility.randomDouble(0.0, 1.0); // Generate uniform distribution value
+			prob = Utility.randomDouble(0.0, 1.0); // Generate uniform distribution random value
 			
 			// Mutation wil occur
 			if(prob < MUTATION_RATE) {
+				System.out.println("Mutation...");
 				mutationResult[i] = true;
 			}
 			else { // Mutation will NOT occur
@@ -223,20 +228,14 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 		return new AsteroidCollectorChromosome(energyThreshold, cargoholdCapacity, maximumDistanceAsteroid, 
 				asteroidDistanceVsResourceRatio, angleWeight);
 	}
-
-	@Override
-	public void fitness() {
-	
-	}
 	
 	/**
-	 * Gets the fitness score of <code>AsteroidCollectorChromosome</code>
-	 * instance
+	 * Method will set the fitness for the particular chromosome
 	 * 
-	 * @return	the fitness score for the chromosome
+	 * @param totalScore	the total score the agent recieved at the end of the game
 	 */
-	public double getFitnessScore() {
-		return fitnessScore;
+	public void calculateFitness(double totalScore) {
+		fitnessScore = totalScore;
 	}
 	
 	@Override
