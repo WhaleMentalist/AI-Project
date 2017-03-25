@@ -20,6 +20,11 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 public class Navigator {
 	
 	/**
+	 * Set value for graphcis debugging
+	 */
+	private final boolean DEBUG_MODE;
+	
+	/**
 	 * The minimal path needed to pursue object
 	 */
 	private static final int MINIMAL_PATH = 3;
@@ -28,7 +33,7 @@ public class Navigator {
 	 * Abstraction of the navigation problem as 
 	 * a graph data structure
 	 */
-	private NavigationMap map;
+	public NavigationMap map;
 	
 	/**
 	 * The path to the objective (i.e goal)
@@ -75,9 +80,12 @@ public class Navigator {
 	
 	/**
 	 * Initializes the object 
+	 * 
+	 * @param debug	allow graphcis display for debug
 	 */
-	public Navigator() {
+	public Navigator(boolean debug) {
 		currentTargetNode = null;
+		DEBUG_MODE = debug;
 	}
 	
 	/**
@@ -107,7 +115,7 @@ public class Navigator {
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
 						knowledge.calculateVelocity(currentTargetNode.node.position));
 			}
-			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 2)) {
+			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 4)) {
 				currentTargetNode = path.pop();
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
 						knowledge.calculateVelocity(currentTargetNode.node.position));
@@ -135,9 +143,15 @@ public class Navigator {
 	 */
 	public void generateAStarPath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, 
 			AbstractObject goal, Set<AbstractObject> obstacles) {
+		
 		currentTargetNode = null;
-		map = new NavigationMap(space, knowledge); // Generate graph for problem
+		map = new NavigationMap(space, knowledge, DEBUG_MODE); // Generate graph for problem
 		goalObject = goal;
+		
+		if(goalObject == null) {
+			throw new NavigationFailureException("Navigation failed! No object was specified!");
+		}
+		
 		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
 		
 		try {
@@ -161,7 +175,7 @@ public class Navigator {
 	 */
 	public void generateGreedyBFPath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, AbstractObject goal) {
 		currentTargetNode = null;
-		map = new NavigationMap(space, knowledge); // Generate graph for problem
+		map = new NavigationMap(space, knowledge, DEBUG_MODE); // Generate graph for problem
 		goalObject = goal;
 		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
 		
@@ -180,6 +194,9 @@ public class Navigator {
 	 * @return a <code>List</code> of <code>GraphSearchNode</code> objects
 	 */
 	public List<GraphSearchNode> getCopyPath() {
+		if(path == null) 
+			return null;
+		
 		return (List<GraphSearchNode>) path.clone();
 	}
 	

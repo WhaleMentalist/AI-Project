@@ -134,10 +134,10 @@ public class GraphSearch {
 	}
 	
 	/**
-	 * Experimental: Trying to find a depth that is NOT too long, 
+	 * Experimental: Trying to find a limit that is NOT too long, 
 	 * but doesn't tie down the capabilities of the AI
 	 */
-	private static final int MAX_DEPTH = 80;
+	private static final int MAX_SEARCH_LIMIT = 100;
 	
 	/**
 	 * The initial start of the search
@@ -180,7 +180,7 @@ public class GraphSearch {
 	
 	/**
 	 * Function will search for a solution (i.e a path) given the data members. Method is
-	 * a bit large, but for the most part readable! It uses f(n) = g(n) + h(n)
+	 * a bit large, but for the most part readable! It uses f(n) = g(n) + h(n) as cost.
 	 * 
 	 * @param obstacles the obstacles the search should avoid
 	 * @return an <code>AStarNode</code> who can be recursively iterated to 
@@ -189,67 +189,56 @@ public class GraphSearch {
 	 * 										a multitude of reasons
 	 */
 	public Stack<GraphSearchNode> aStarSearch(Set<AbstractObject> obstacles) throws SearchFailureException {
-		int depth = 0; // Start at depth zero
-		Set<GraphSearchNode> closed = new HashSet<GraphSearchNode>(); // Create list of explored nodes
-		
-		// Create a priority queue that is sorted by a anonymous class that compares nodes by the 'total cost'
-		PriorityQueue<GraphSearchNode> open = new PriorityQueue<GraphSearchNode>(new Comparator<GraphSearchNode>() {
+		Set<GraphSearchNode> closed = new HashSet<GraphSearchNode>(); // Set of explored nodes
+		Map<GraphSearchNode, Integer> costMap = new HashMap<GraphSearchNode, Integer>(); // Access cost in O(1)
+		Queue<GraphSearchNode> open = new PriorityQueue<GraphSearchNode>(new Comparator<GraphSearchNode>() {
 			@Override
-			public int compare(GraphSearchNode arg0, GraphSearchNode arg1) {
-				return Integer.compare(arg0.fCost, arg1.fCost);
+			public int compare(GraphSearchNode nodeOne, GraphSearchNode nodeTwo) {
+				return Integer.compare(nodeOne.fCost, nodeTwo.fCost);
 			}
 		});
 		
-		// Retrieve neighbors through an edge list
-		List<Graph<NavigationVertexKey, NavigationVertex>.Edge> neighbors = map.getNeighbors(initialNode.node);
-		GraphSearchNode newNode;
-		GraphSearchNode nextNode;
+		map.setObstacles(obstacles);
 		
-		// Add children of initial node to frontier
-		for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
-			newNode = new GraphSearchNode(edge.endVertex.data); // Generate a search node to track costs
-			newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node); // Calculate heuristic
-			newNode.parent = initialNode; // Set parent to initial node
-			newNode.gCost = edge.weight + newNode.parent.gCost; // Add path cost
-			newNode.fCost = newNode.gCost + newNode.hCost; // Calculate total cost
-			open.add(newNode); // Add to queue  
-		}
+		GraphSearchNode currentNode; // Reference to node that was just popped from queue
+		GraphSearchNode newNode; // Reference to potenial neighbor nodes
+		List<Graph<NavigationVertexKey, NavigationVertex>.Edge> neighbors; // List containing neighbors of node
+		int tentativeGScore = 0; // Hold the potenial cost of node, in case better path is found
+		int searchLimit = 0;
 		
-		while(depth < MAX_DEPTH) { // Implementation specific to 'Spacewars', we don't want to sit and search too long
+		open.add(initialNode); // Insert start node into open queue
+		costMap.put(initialNode, initialNode.gCost); // Put cost so far
+		while(!(open.isEmpty()) && searchLimit < MAX_SEARCH_LIMIT) { // Continue until open queue is empty
+			currentNode = open.poll(); // Remove lowest 'fCost' node from queue
 			
-			// The explorable is empty! Something weird happened
-			if(open.isEmpty()) {
-				throw new SearchFailureException("A* Search Failed! The frontier was empty!");
-			}
+			if(currentNode.equals(goalNode)) 
+				return generatePath(currentNode); // Recursivly generate path and return it
 			
-			nextNode = open.poll(); // Get head of priority queue
+			closed.add(currentNode); // Add node to the explored set
+			map.formConnections(map.getNavigationVertexKey(currentNode.node)); // Generate connections as needed
+			neighbors = map.getNeighbors(currentNode.node); // Get neighbors of current node
 			
-			if(nextNode.equals(goalNode)) { // If it is a goal node then return solution
-				return generatePath(nextNode);
-			}
-			
-			if(!(closed.contains(nextNode)) && !(map.isCloseToObstacle(nextNode.node))) { // If closed does not contain the explored node
-				closed.add(nextNode); // Add explored node to the closed set
-				neighbors = map.getNeighbors(nextNode.node);
-				
-				// Iterate through each neighbor
-				for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
-					newNode = new GraphSearchNode(edge.endVertex.data);
-					
-					if(!(closed.contains(newNode)) && 
-							!(open.contains(newNode))) {
-						// Again... Like up above we need to calculate costs for the algorithm to use
-						newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node);
-						newNode.parent = nextNode;
-						newNode.gCost = edge.weight + newNode.parent.gCost;
-						newNode.fCost = newNode.gCost + newNode.hCost;
-						open.add(newNode);
-					}
+			// Iterate through each neighbor of the current node
+			for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
+				newNode = new GraphSearchNode(edge.endVertex.data); // Create new graph search node
+				if(closed.contains(newNode)) // Skip nodes that have been explored
+					continue;
+				tentativeGScore = currentNode.gCost + 
+								map.calculateCost(currentNode.node, newNode.node); // Calculate path cost
+				if(!(open.contains(newNode))) {
+					newNode.parent = currentNode;
+					newNode.gCost = tentativeGScore;
+					newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node);
+					newNode.fCost = newNode.hCost + newNode.gCost;
+					costMap.put(newNode, newNode.gCost);
+					open.add(newNode);
 				}
+				else if(tentativeGScore >= costMap.get(newNode)) // Path cost is NOT better
+					continue;
 			}
-			++depth; // Explored a layer, so increase the current depth
+			++searchLimit;
 		}
-		throw new SearchFailureException("A* Search Failed! Maximum Depth Reached"); // Means search reached max depth
+		throw new SearchFailureException("Error, A* search failed! The open set became empty!");
 	}
 	
 	
@@ -262,68 +251,46 @@ public class GraphSearch {
 	 * 										a multitude of reasons
 	 */
 	public Stack<GraphSearchNode> greedyBFSearch() throws SearchFailureException {
-		int depth = 0; // Start at depth zero
-		Set<GraphSearchNode> closed = new HashSet<GraphSearchNode>(); // Create list of explored nodes
-		
-		// Create a priority queue that is sorted by a anonymous class that compares nodes by the 'total cost'
-		PriorityQueue<GraphSearchNode> open = new PriorityQueue<GraphSearchNode>(new Comparator<GraphSearchNode>() {
-
+		Set<GraphSearchNode> closed = new HashSet<GraphSearchNode>(); // Set of explored nodes
+		Queue<GraphSearchNode> open = new PriorityQueue<GraphSearchNode>(new Comparator<GraphSearchNode>() {
 			@Override
-			public int compare(GraphSearchNode arg0, GraphSearchNode arg1) {
-				return Integer.compare(arg0.fCost, arg1.fCost);
+			public int compare(GraphSearchNode nodeOne, GraphSearchNode nodeTwo) {
+				return Integer.compare(nodeOne.fCost, nodeTwo.fCost);
 			}
 		});
 		
-		// Retrieve neighbors through an edge list
-		List<Graph<NavigationVertexKey, NavigationVertex>.Edge> neighbors = map.getNeighbors(initialNode.node);
-		GraphSearchNode newNode;
-		GraphSearchNode nextNode;
+		GraphSearchNode currentNode; // Reference to node that was just popped from queue
+		GraphSearchNode newNode; // Reference to potenial neighbor nodes
+		List<Graph<NavigationVertexKey, NavigationVertex>.Edge> neighbors; // List containing neighbors of node
+		int searchLimit = 0;
 		
-		// Add children of initial node to frontier
-		for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
-			newNode = new GraphSearchNode(edge.endVertex.data); // Generate a search node to track costs
-			newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node); // Calculate heuristic
-			newNode.parent = initialNode; // Set parent to initial node
-			newNode.gCost = edge.weight + newNode.parent.gCost; // Add path cost
-			newNode.fCost = newNode.gCost + newNode.hCost; // Calculate total cost
-			open.add(newNode); // Add to queue  
-		}
-		
-		while(depth < MAX_DEPTH) { // Implementation specific to 'Spacewars', we don't want to sit and search too long
+		open.add(initialNode); // Insert start node into open queue
+		while(!(open.isEmpty()) && searchLimit < MAX_SEARCH_LIMIT) { // Continue until open queue is empty
+			currentNode = open.poll(); // Remove lowest 'fCost' node from queue
 			
-			// The explorable is empty! Something weird happened
-			if(open.isEmpty()) {
-				throw new SearchFailureException("A* Search Failed! The frontier was empty!");
-			}
+			if(currentNode.equals(goalNode)) 
+				return generatePath(currentNode); // Recursivly generate path and return it
 			
-			nextNode = open.poll(); // Get head of priority queue
+			closed.add(currentNode); // Add node to the explored set
+			map.formConnections(map.getNavigationVertexKey(currentNode.node)); // Generate connections as needed
+			neighbors = map.getNeighbors(currentNode.node); // Get neighbors of current node
 			
-			if(nextNode.equals(goalNode)) { // If it is a goal node then return solution
-				return generatePath(nextNode);
-			}
-			
-			if(!(closed.contains(nextNode))) { // If closed does not contain the explored node
-				closed.add(nextNode); // Add explored node to the closed set
-				neighbors = map.getNeighbors(nextNode.node);
-				
-				// Iterate through each neighbor
-				for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
-					newNode = new GraphSearchNode(edge.endVertex.data);
-					
-					if(!(closed.contains(newNode)) && 
-							!(open.contains(newNode))) {
-						// Again... Like up above we need to calculate costs for the algorithm to use
-						newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node);
-						newNode.parent = nextNode;
-						newNode.gCost = edge.weight + newNode.parent.gCost;
-						newNode.fCost = newNode.hCost;  //Greedy Best First uses h(x) for f(x)
-						open.add(newNode);
-					}
+			// Iterate through each neighbor of the current node
+			for(Graph<NavigationVertexKey, NavigationVertex>.Edge edge : neighbors) {
+				newNode = new GraphSearchNode(edge.endVertex.data); // Create new graph search node
+				if(closed.contains(newNode)) // Skip nodes that have been explored
+					continue;
+				if(!(open.contains(newNode))) {
+					newNode.parent = currentNode;
+					newNode.gCost = 0;
+					newNode.hCost = map.calculateHeuristic(newNode.node, goalNode.node);
+					newNode.fCost = newNode.hCost;
+					open.add(newNode);
 				}
 			}
-			++depth; // Explored a layer, so increase the current depth
+			++searchLimit;
 		}
-		throw new SearchFailureException("Greedy Best First Search Failed! Maximum Depth Reached"); // Means search reached max depth
+		throw new SearchFailureException("Error, Greedy Best First search failed! The open set became empty!");
 	}
 	
 	/**
@@ -338,6 +305,7 @@ public class GraphSearch {
 		Stack<GraphSearchNode> path = new Stack<GraphSearchNode>();
 		GraphSearchNode currentNode = node;
 		
+		// Then iterate as usual
 		while(currentNode.parent != null) {
 			path.push(currentNode);
 			currentNode = currentNode.parent;
