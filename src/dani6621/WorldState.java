@@ -17,7 +17,22 @@ import spacesettlers.utilities.Vector2D;
  * and potential obstacles.
  */
 public class WorldState {
+	
+	/**
+	 * The worst angle the ship would have to turn to perform action
+	 */
+	public static final double WORST_ANGLE = 180.0;
 
+	/**
+	 * Low energy threshold
+	 */
+	public static final double LOW_ENERGY = Ship.SHIP_MAX_ENERGY / 2.0;
+	
+	/**
+	 * Full cargo for ship to go back to base
+	 */
+	public static final int FULL_CARGO = 4000;
+	
     /**
      * If a maximum velocity is imposed the agent has better
      * control
@@ -38,13 +53,13 @@ public class WorldState {
      * Any algorithms that perform look-ahead will use this
      * as max amount (i.e two seconds later in simulation)
      */
-    public static final double MAX_LOOK_AHEAD = 80;
+    public static final double MAX_LOOK_AHEAD = 20;
     
     /**
 	 * The individual that was assigned to agent containing the values that 
 	 * will govern the agent. It will be set once in the ladder.
 	 */
-	public final Individual individual;
+	// public final Individual individual;
 
     /**
      * Simply a reference to use some of the functions (i.e shortest distance, obstructions)
@@ -65,10 +80,10 @@ public class WorldState {
      * @param ship  the ship belonging to agent
      * @param ind	the individual assigned to the ship
      */
-    public WorldState(Toroidal2DPhysics space, Ship ship, Individual ind) {
+    public WorldState(Toroidal2DPhysics space, Ship ship) {
         _space = space;
         _referenceShip = ship;
-        individual = ind;
+        // individual = ind;
     }
 
     /**
@@ -204,7 +219,7 @@ public class WorldState {
         Position shipPos = _referenceShip.getPosition(); // Retrieve current position of ship
         Vector2D pathOfShip = shipPos.getTranslationalVelocity(); // Get velocity of ship
         Vector2D toAsteroid;
-        double angleBetween = Math.PI; // Set to maximum angle
+        double angleBetween = WORST_ANGLE; // Set to the worst angle 
 
         for (Asteroid asteroid : getMineableAsteroids()) {
         	
@@ -214,15 +229,12 @@ public class WorldState {
         	
             dist = _space.findShortestDistance(shipPos, asteroid.getPosition());
             toAsteroid = _space.findShortestDistanceVector(shipPos, asteroid.getPosition()); // Get vector pointing from ship to asteroid
-            angleBetween = pathOfShip.angleBetween(toAsteroid); // Get angle between asteroid and ship velocity
+            angleBetween = Math.toDegrees(Math.abs(pathOfShip.angleBetween(toAsteroid))); // Get angle between asteroid and ship velocity
             
             // Angle the ship velocity to target asteroid also adds to cost as angle increases
-            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist * (1.0 + Math.pow(angleBetween, 
-            									individual.asteroidCollectorChromosome.ANGLE_WEIGHT)));
+            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist + angleBetween * 5.0);
             
-            if (currentCostEffectiveness > costEffectiveness &&
-            		dist < individual.asteroidCollectorChromosome.
-            		MAXIMUM_DISTANCE_ASTEROID) { // Check if asteroid closer to ship and clear of obstructions
+            if (currentCostEffectiveness > costEffectiveness) { // Check if asteroid closer to ship and clear of obstructions
                 costEffectiveness = currentCostEffectiveness; // Reassign shortest distance
                 candidate = asteroid;
             }
@@ -382,20 +394,17 @@ public class WorldState {
         Position objectPos = object.getPosition();
         Vector2D shipVel = shipPos.getTranslationalVelocity();
         Vector2D objectVel = shipPos.getTranslationalVelocity();
-
-        double distance = _space.findShortestDistance(shipPos, objectPos);
-        double estimatedArrivalTime = distance / shipVel.getMagnitude();
         
         // Predict future position of object we are intercepting
-        Position estimatedFuturePosition = new Position(objectPos.getX() + objectVel.getXValue() *
-                estimatedArrivalTime, objectPos.getY() + objectVel.getYValue() * estimatedArrivalTime);
+        Position estimatedFuturePosition = new Position(objectPos.getX() + objectVel.getXValue(), 
+        		objectPos.getY() + objectVel.getYValue());
         
-        // Get a vector that does to projected location from ship position
+        // Get a vector that goes to projected location from ship position
         Vector2D displacementVector = _space.findShortestDistanceVector(shipPos, estimatedFuturePosition);
 
         // Using constant acceleration equation to catch object
-        Vector2D finalVelocity = ((displacementVector.subtract(shipVel.multiply(estimatedArrivalTime))).
-                multiply(2.0)).divide(estimatedArrivalTime * estimatedArrivalTime);
+        Vector2D finalVelocity = ((displacementVector.subtract(shipVel)).
+                multiply(2.0));
 
         // Don't let the ship GO TO FAST! It will lose control because its yaw is slow
         if(finalVelocity.getMagnitude() > MAX_VELOCITY_MAGNITUDE) {

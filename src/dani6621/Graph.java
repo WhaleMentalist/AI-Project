@@ -251,8 +251,8 @@ public class Graph<K, V> {
 	 * Function will retrieve weight, if applicable, from the two
 	 * vertices
 	 * 
-	 * @param vertex1 the first vertex
-	 * @param vertex2 the second vertex
+	 * @param vertexOneKey the first vertex
+	 * @param vertexTwoKey the second vertex
 	 * @return the weight between the two vertices, if the returned value is negative
 	 * 			then there is no connection!
 	 */

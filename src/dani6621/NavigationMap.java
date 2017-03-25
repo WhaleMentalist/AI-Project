@@ -1,11 +1,19 @@
 package dani6621;
 
-import java.util.*;
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
+import spacesettlers.graphics.LineGraphics;
+import spacesettlers.graphics.SpacewarGraphics;
+import spacesettlers.graphics.StarGraphics;
+import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
-import spacesettlers.objects.AbstractObject;
 
 /**
  * Class will take simulation map and create an abstraction
@@ -90,7 +98,7 @@ public class NavigationMap {
 	 * The vertex that will represent the 
 	 * navigation map vertices
 	 */
-	public class NavigationVertex {
+	public static class NavigationVertex {
 		
 		/**
 		 * The position of the node in the 
@@ -114,14 +122,19 @@ public class NavigationMap {
 	public static final int SPACING = 40;
 	
 	/**
-	 * Determines if vertex is close to obstacle
+	 * The amount of time the projection of movement will be viewed
 	 */
-	private static final int CLOSE_DISTANCE = Ship.SHIP_RADIUS * 3;
+	public static final int LOOK_AHEAD = (int) Math.ceil(SPACING / 15.0);
 	
 	/**
-	 * The offset of the connection algorithm
+	 * Determines if vertex is close to obstacle
 	 */
-	private static final int OFFSET = 2;
+	private static final int CLOSE_DISTANCE = (int) (Ship.SHIP_RADIUS * 2.5);
+	
+	/**
+	 * Set value for graphcis debugging
+	 */
+	private final boolean DEBUG_MODE;
 	
 	/**
 	 * Data member contains the sample points, it
@@ -137,10 +150,10 @@ public class NavigationMap {
 	private Toroidal2DPhysics spaceRef;
 	
 	/**
-	 * Reference to knowledge representation to help 
-	 * graph construct accurate map
+	 * Reference to the set of obstacles that will try to be
+	 * avoided
 	 */
-	private WorldState knowledgeRef;
+	private Set<AbstractObject> obstacles;
 	
 	/**
 	 * Number of nodes in each row
@@ -152,6 +165,8 @@ public class NavigationMap {
 	 */
 	public final int columnNodeNumber;
 	
+	public List<SpacewarGraphics> graphDrawing;
+	
 	/**
 	 * Constructor will initialize and create graph
 	 * with proper edges and connections
@@ -160,11 +175,14 @@ public class NavigationMap {
 	 * 			graph
 	 * 
 	 * @param knowledge the knowledge representation
+	 * 
+	 *@param debug	the flag for graphics display
 	 */
-	public NavigationMap(Toroidal2DPhysics space, WorldState knowledge) {
+	public NavigationMap(Toroidal2DPhysics space, WorldState knowledge, boolean debug) {
+		DEBUG_MODE = debug;
+		graphDrawing = new ArrayList<SpacewarGraphics>();
 		
 		spaceRef = space;
-		knowledgeRef = knowledge;
 		// Get dimensions of environment
 		int height = spaceRef.getHeight();
 		int width = spaceRef.getWidth();
@@ -183,7 +201,6 @@ public class NavigationMap {
 		NavigationVertexKey key;
 		NavigationVertex vertex;
 		
-		//row/columns are backwards
 		// Enumerate through rows after columns
 		for(int i = 0; i < rowNodeNumber; ++i) {
 			// Go down along column first
@@ -191,19 +208,13 @@ public class NavigationMap {
 				nodePosition = new Position((double) i * SPACING, (double) j * SPACING);
 				vertex = new NavigationVertex(nodePosition);
 				key = new NavigationVertexKey(i, j);
-				
 				dataPoints.addVertex(key, vertex);
+				if(DEBUG_MODE)
+					graphDrawing.add(new StarGraphics(Color.RED, nodePosition));
 			}
 		}
 		
-		// Form connections for each node
-		for(int i = 0; i < rowNodeNumber; ++i) {
-			for(int j = 0; j < columnNodeNumber; ++j) {
-				key = new NavigationVertexKey(i, j);
-				vertex = dataPoints.getVertex(key).data;
-				formConnections(key, vertex);
-			}
-		}
+		obstacles = new HashSet<AbstractObject>(); // Instantiate
 	}
 	
 	/**
@@ -240,9 +251,10 @@ public class NavigationMap {
 	}
 	
 	/**
+	 * Method will retrieve the neighbors of the vertex
 	 * 
-	 * @param v
-	 * @return
+	 * @param v	the vertex that is being querried
+	 * @return	a <code>List</code> of <code>Edge</code> objects connected to the vertex in question
 	 */
 	public List<Graph<NavigationVertexKey, NavigationVertex>.Edge> getNeighbors(NavigationVertex v) {
 		NavigationVertexKey key = getNavigationVertexKey(v);
@@ -273,8 +285,11 @@ public class NavigationMap {
 				Position startPos = startVertex.position;
 				Position endPos = endVertex.position;
 				
-				if(spaceRef.isPathClearOfObstructions(startPos, endPos, knowledgeRef.getObstacles(), Ship.SHIP_RADIUS * 4)) {
+				// If there are no obstacles along edge or no obstacles are too close to end node then it can be added
+				if(spaceRef.isPathClearOfObstructions(startPos, endPos, obstacles, CLOSE_DISTANCE) && !(isCloseToObstacle(endVertex))) {
 					dataPoints.addEdge(startKey, endKey, (int) Math.ceil(spaceRef.findShortestDistance(startPos, endPos)));
+					if(DEBUG_MODE)
+						graphDrawing.add(new LineGraphics(startPos, endPos, spaceRef.findShortestDistanceVector(startPos, endPos)));
 				}
 			}
 		}
@@ -286,32 +301,27 @@ public class NavigationMap {
 	 * @param key the key of the vertex to form connections
 	 * @param vertex the actual vertex object to add connections to
 	 */
-	private void formConnections(NavigationVertexKey key, NavigationVertex vertex) {
+	public void formConnections(NavigationVertexKey key) {
 		int vertexRow = key.vertexRowNumber;
 		int vertexColumn = key.vertexColumnNumber;
 		
 		// Goto neighbor next to node by offset
-		for(int i = vertexRow; i < vertexRow + OFFSET; ++i) {
-			for(int j = vertexColumn; j < vertexColumn + OFFSET; ++j) {
+		for(int i = vertexRow - 1; i < vertexRow + 2; ++i) {
+			for(int j = vertexColumn - 1; j < vertexColumn + 2; ++j) {
 				if(i == vertexRow && j == vertexColumn) { // Skip 'vertex' itself, don't want to form connection to self
 					continue;
 				}
 				else {
 					// Use modulus to perform wrap around, as this is a torus space
-					addConnection(vertexRow, vertexColumn, (i % (rowNodeNumber)), 
-							(j % (columnNodeNumber))); // Create a connection
+					addConnection(vertexRow, vertexColumn, ((i + rowNodeNumber) % rowNodeNumber), 
+							((j + columnNodeNumber) % (columnNodeNumber))); // Create a connection
 				}
 			}
 		}
 		
-		// Edge case: When the specified column is zero, we need to connect both diagonal up and diagonal down (Torus space)
-		if(vertexColumn == 0) {
-			addConnection(vertexRow, vertexColumn, 
-					((vertexRow + 1) % rowNodeNumber), (columnNodeNumber - 1));
-		}
-		
 		addConnection(vertexRow, vertexColumn, ((vertexRow + 1) % rowNodeNumber), 
 				((vertexColumn - 1) % columnNodeNumber));
+				
 	}
 	
 	/** 
@@ -320,7 +330,7 @@ public class NavigationMap {
 	 * @param myObj - Passes an abstract object
 	 * @return Vertex object that is closest to the argument
 	 */
-	public NavigationVertex findNearestVertex(AbstractObject myObj){
+	public NavigationVertex findNearestVertex(AbstractObject myObj) {
 		Position objPos = myObj.getPosition();
 		Double xCoord = objPos.getX();
 		Double yCoord = objPos.getY();
@@ -329,11 +339,10 @@ public class NavigationMap {
 		int rowNumber = ((int)Math.round(xCoord / SPACING) % rowNodeNumber);
 		int columnNumber = ((int)Math.round(yCoord / SPACING) % columnNodeNumber);
 		
-		//Create navigation vertex key map
-		NavigationVertexKey nearestKey = new NavigationVertexKey(rowNumber, columnNumber);
-		NavigationVertex nearestVert = dataPoints.getVertex(nearestKey).data;
+		NavigationVertexKey key = new NavigationVertexKey(rowNumber, columnNumber);
+		NavigationVertex candidate = dataPoints.getVertex(key).data;
 		
-		return nearestVert;
+		return candidate;
 	}
 	
 	/**
@@ -344,7 +353,7 @@ public class NavigationMap {
 	 * @return a <code>NavigationVertexKey</code> of the <code>NavigationVertex</code>
 	 * 			passed
 	 */
-	private NavigationVertexKey getNavigationVertexKey(NavigationVertex vertex) {
+	public NavigationVertexKey getNavigationVertexKey(NavigationVertex vertex) {
 		Position vertexPos = vertex.position;
 		Double xCoord = vertexPos.getX();
 		Double yCoord = vertexPos.getY();
@@ -364,16 +373,26 @@ public class NavigationMap {
 	 * @return the result
 	 */
 	public boolean isCloseToObstacle(NavigationVertex v) {
-		Set<AbstractObject> obstacles = knowledgeRef.getObstacles();
 		int candidate;
+		Position projPosition;
 		
 		for(AbstractObject obj : obstacles) {
-			candidate = (int) spaceRef.findShortestDistance(v.position, obj.getPosition());
+			
+			// Account for movement by projecting few timesteps ahead (i.e 52 timesteps to be exact)
+			if(obj.isMoveable()) {
+				projPosition = new Position(obj.getPosition().getX() + obj.getPosition().getxVelocity(), 
+											obj.getPosition().getY() + obj.getPosition().getyVelocity());
+				candidate =  (int) spaceRef.findShortestDistance(v.position, projPosition) - obj.getRadius();
+			}
+			else {
+				// Calculate straight-line distance and accoutn for object radius
+				candidate = (int) spaceRef.findShortestDistance(v.position, obj.getPosition()) - obj.getRadius();
+			}
+			
 			if(candidate < CLOSE_DISTANCE) {
 				return true;
 			}
 		}
-		
 		return false;
 	}
 	
@@ -407,5 +426,14 @@ public class NavigationMap {
 		NavigationVertexKey endKey = getNavigationVertexKey(end);
 		
 		return dataPoints.getWeight(startKey, endKey);
+	}
+	
+	/**
+	 * Method will set the obstacles to track on the navigation map
+	 * 
+	 * @param obst	the obstacles that will be tracked
+	 */
+	public void setObstacles(Set<AbstractObject> obst) {
+		obstacles = obst;
 	}
  }

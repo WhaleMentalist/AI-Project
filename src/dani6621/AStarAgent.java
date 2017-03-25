@@ -1,19 +1,23 @@
 package dani6621;
 
+import java.awt.Color;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import dani6621.GraphSearch.GraphSearchNode;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
 import spacesettlers.actions.MoveAction;
 import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
-import spacesettlers.clients.ImmutableTeamInfo;
 import spacesettlers.clients.TeamClient;
 import spacesettlers.graphics.SpacewarGraphics;
+import spacesettlers.graphics.StarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
@@ -31,6 +35,11 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 public class AStarAgent extends TeamClient {
 	
 	/**
+	 * Toggle value in order to see graphics on screen to help with debugging
+	 */
+	private static final boolean DEBUG_MODE = false;
+	
+	/**
 	 * Error code for lack of chromosome assignment
 	 */
 	private static final int CHROMOSOME_ASSIGNMENT_FAILURE = -1;
@@ -39,7 +48,7 @@ public class AStarAgent extends TeamClient {
 	 * Number of retries at forming contingency plan
 	 * when graph search fails
 	 */
-	private static final int MAX_RETRIES = 3;
+	private static final int MAX_RETRIES = 5;
 	
 	/**
 	 * Constant will delimit whether agent can build a base
@@ -49,7 +58,7 @@ public class AStarAgent extends TeamClient {
 	/**
 	 * Amount of time to wait before creating a new map
 	 */
-	private static final int NEW_MAP_TIMESTEP = 15;
+	private static final int NEW_MAP_TIMESTEP = 10;
 
     /**
      * Represents how agent will perceive world state. You can
@@ -90,6 +99,11 @@ public class AStarAgent extends TeamClient {
      * govern the agent's actions
      */
     private Individual assignedIndividual;
+    
+    /**
+     * Debug navigation
+     */
+    private List<SpacewarGraphics> graphicsToAdd;
 
     /**
      * Assigns ships to asteroids and beacons, as described above
@@ -122,126 +136,165 @@ public class AStarAgent extends TeamClient {
         AbstractAction newAction = new DoNothingAction();
         perceive(space, ship, assignedIndividual);
         
-        if(knowledge.getCurrentEnergy() < assignedIndividual.
-        		asteroidCollectorChromosome.ENERGY_REFUEL_THRESHOLD) { // Get energy when low
-            AbstractObject source = knowledge.getClosestEnergySource(unapproachableObject);
-
-            if(source == null) { // Didn't find a source
-            	newAction = new DoNothingAction(); // Prevent ship from killing self
-            }
-            else { // Otherwise go to the energy source
-            	
-            	// Replan route
-            	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-            		
-            		for(int i = 0; ; ++i) { // Allow contingnecy plan to form when failure occurs
-                		try {
-                			navigator.generateAStarPath(space, knowledge, ship, source, 
-									knowledge.getObstaclesExceptTeamBase());
-                		}
-                		catch(Navigator.NavigationFailureException e) { // After a number of retries give up
-                			
-                			if(i < MAX_RETRIES) {
-                				unapproachableObject.put(source.getId(), source); // Add as unsolvable
-                				source = knowledge.getClosestEnergySource(unapproachableObject); // Get new object
-                				continue;
-                			}
-                			else {
-                    			break;
-                    		}
-                		}
-                		break;
-                	}
-                }
-            	
-            	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
-            	
-            	if(newAction instanceof DoNothingAction) { // Basically search doesn't yield solution so simply go straight to source!
-            		source = knowledge.getClosestEnergySource();
-            		newAction = new MoveAction(space, ship.getPosition(), source.getPosition(), 
-            				knowledge.calculateInterceptVelocity(source));
-            	}
+        // Draw A* Path with debug (Got dead code warning, but it's intended)
+        if(DEBUG_MODE && navigator.getCopyPath() != null) {
+        	for(GraphSearchNode node : navigator.getCopyPath()) {
+            	graphicsToAdd.add(new StarGraphics(2, Color.YELLOW, node.node.position));
             }
         }
-        else if(ship.getResources().getTotal() > assignedIndividual.
-        		asteroidCollectorChromosome.CARGOHOLD_CAPACITY) { // Detect full cargo
-            Base closestBase = knowledge.getClosestFriendlyBase(unapproachableObject);
+        
+        if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
             
-            if(closestBase != null) { // Goto base that was found
-            		
-            	// Replan route
-                if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-                		
-                	for(int i = 0; ; ++i) { // Allow contingnecy plan to form when failure occurs
-                    	try {
-                    		navigator.generateAStarPath(space, knowledge, ship, closestBase, 
-                        			knowledge.getObstaclesExceptTeamBase());
-                    	}
-                    	catch(Navigator.NavigationFailureException e) { // After a number of retries give up
-                    			
-                    		if(i < MAX_RETRIES) {
-                    			unapproachableObject.put(closestBase.getId(), closestBase); // Add as unsolvable
-                    			closestBase = knowledge.getClosestFriendlyBase(unapproachableObject);
-                    			
-                    			if(closestBase != null) { // Might run out of bases to found, so check
-                        			continue;
-                    			}
-                    			else { // Heh... We ran out of bases. Not much we can do besides performing another action
-                    				break;
-                    			}
-
-                    		}
-                    		else {
-                    			break;
-                    		}
-                    	}
-                    	break;
-                    }
-                }
+        	if(ship.getResources().getTotal() > WorldState.FULL_CARGO / 2) { // Might be better off charging at base
+        		returnResources(space, ship);
+        	}
+        	else { // Don't have enough resources to warrant return to base
+        		retrieveEnergy(space, ship);
+        	}
+        	
+        	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
+             	
+            if(newAction instanceof DoNothingAction) { // Basically search doesn't yield solution so simply go straight to source!
+            	AbstractObject source = knowledge.getClosestEnergySource();
+            	newAction = new MoveAction(space, ship.getPosition(), source.getPosition(), 
+            				knowledge.calculateInterceptVelocity(source));
+            }
+        }
+        else if(ship.getResources().getTotal() > WorldState.FULL_CARGO) { // Detect full cargo
+            
+            returnResources(space, ship);	
+            newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
             	
-            	newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
-            	
-            	if(newAction instanceof DoNothingAction) { // If no solution found, go to base at all costs... (Dumb way)
-            		closestBase = knowledge.getClosestFriendlyBase();
-            		newAction = new MoveAction(space, ship.getPosition(), closestBase.getPosition(), 
-            				knowledge.calculateInterceptVelocity(closestBase));
-            	}
+            if(newAction instanceof DoNothingAction) { // If no solution found, go to base at all costs... (Dumb way)
+            	Base closestBase = knowledge.getClosestFriendlyBase();
+            	newAction = new MoveAction(space, ship.getPosition(), closestBase.getPosition(), 
+            			knowledge.calculateInterceptVelocity(closestBase));
             }
         }
         else { // Perform asteroid mining
-            // Find closest asteroid to mine
-            Asteroid closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
-            
-            if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
-            		
-            	// Replan route
-                if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
-                		
-                	for(int i = 0; ; ++i) { // Allow contingnecy plan to form when failure occurs
-                   		try {
-                    		navigator.generateAStarPath(space, knowledge, ship, closestAsteroid, 
-    								knowledge.getObstacles());
-                    	}
-                    	catch(Navigator.NavigationFailureException e) { // After a number of retries give up
-                    			
-                    		if(i < MAX_RETRIES) {
-                        		unapproachableObject.put(closestAsteroid.getId(), closestAsteroid); // Add as unsolvable
-                    			closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
-                    			continue;
-                    		}
-                    		else {
-                    			break;
-                    		}
-                    	}
-                   		break;
-                    }
-                }
-            }
-                
+            asteroidMine(space, ship);
             newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
         }
         
         return newAction;
+    }
+    
+    /**
+     * Method will compute asteroid for ship to go after
+     * 
+     * @param space	the space the ship is in
+     * @param ship	the reference to specified ship
+     */
+    private void asteroidMine(Toroidal2DPhysics space, Ship ship) {
+    	 // Find closest asteroid to mine
+        Asteroid closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
+        
+        if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
+        		
+        	// Replan route
+            if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+            		
+            	for(int i = 0; ; ++i) { // Allow contingnecy plan to form when failure occurs
+               		try {
+                		navigator.generateAStarPath(space, knowledge, ship, closestAsteroid, 
+								knowledge.getObstacles());
+                	}
+                	catch(Navigator.NavigationFailureException e) { // After a number of retries give up
+                			
+                		if(i < MAX_RETRIES) {
+                			if(closestAsteroid != null)
+                				unapproachableObject.put(closestAsteroid.getId(), closestAsteroid); // Add as unsolvable
+                			closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
+                			continue;
+                		}
+                		else {
+                			break;
+                		}
+                	}
+               		break;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Method will compute base for ship to return resources 
+     * 
+     * 
+     * @param space	the space the ship is in
+     * @param ship	the reference to specified ship
+     * 
+     */
+    private void returnResources(Toroidal2DPhysics space, Ship ship) {
+    	Base closestBase = knowledge.getClosestFriendlyBase(unapproachableObject);
+        
+        if(closestBase != null) { // Goto base that was found
+        		
+        	// Replan route
+            if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+            		
+            	for(int i = 0; ; ++i) { // Allow contingnecy plan to form when failure occurs
+                	try {
+                		navigator.generateAStarPath(space, knowledge, ship, closestBase, 
+                    			knowledge.getObstaclesExceptTeamBase());
+                	}
+                	catch(Navigator.NavigationFailureException e) { // After a number of retries give up
+                			
+                		if(i < MAX_RETRIES) {
+                			if(closestBase != null)
+                				unapproachableObject.put(closestBase.getId(), closestBase); // Add as unsolvable
+                			closestBase = knowledge.getClosestFriendlyBase(unapproachableObject);
+                			
+                			if(closestBase != null) { // Might run out of bases to found, so check
+                    			continue;
+                			}
+                			else { // Heh... We ran out of bases. Not much we can do besides performing another action
+                				break;
+                			}
+
+                		}
+                		else {
+                			break;
+                		}
+                	}
+                	break;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Method will issue command for ship to attain energy
+     * 
+     * @param space	the space the ship is in
+     * @param ship	the reference to the ship
+     */
+    private void retrieveEnergy(Toroidal2DPhysics space, Ship ship) {
+    	AbstractObject source = knowledge.getClosestEnergySource(unapproachableObject);
+        
+        // Replan route
+        if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0) {
+        		
+        	for(int i = 0; ; ++i) { // Allow contingnecy plan to form when failure occurs
+            	try {
+            		navigator.generateAStarPath(space, knowledge, ship, source, 
+								knowledge.getObstaclesExceptTeamBase());
+            	}
+            	catch(Navigator.NavigationFailureException e) { // After a number of retries give up
+            			
+            		if(i < MAX_RETRIES) {
+            			if(source != null)
+            				unapproachableObject.put(source.getId(), source); // Add as unsolvable
+            			source = knowledge.getClosestEnergySource(unapproachableObject); // Get new object
+            			continue;
+            		}
+            		else {
+                		break;
+                	}
+            	}
+            	break;
+            }
+        }
     }
 
     /**
@@ -253,7 +306,7 @@ public class AStarAgent extends TeamClient {
      * @param individual	the individual assigned to agent
      */
     private void perceive(Toroidal2DPhysics space, Ship ship, Individual individual) {
-        knowledge = new WorldState(space, ship, individual);
+        knowledge = new WorldState(space, ship);
     }
     
     /**
@@ -261,7 +314,8 @@ public class AStarAgent extends TeamClient {
      */
     @Override
     public void getMovementEnd(Toroidal2DPhysics space, Set<AbstractActionableObject> actionableObjects) {
-    	unapproachableObject.clear(); // Clear the objects for the next timestep, the object could be reachable
+    	if(space.getCurrentTimestep() % NEW_MAP_TIMESTEP == 0)
+    		unapproachableObject.clear(); // Clear the objects for the next timestep, the object could be reachable
     }
     
     /**
@@ -272,10 +326,12 @@ public class AStarAgent extends TeamClient {
     public void initialize(Toroidal2DPhysics space) {
     	
     	// Create navigation and track list of objects that could not be approached
-    	navigator = new Navigator();
+    	navigator = new Navigator(DEBUG_MODE);
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
+    	graphicsToAdd = new ArrayList<SpacewarGraphics>();
     	
     	// The 'IndividualBookKeeper' is much like a librarian with books
+    	/*
     	bookKeeper = new IndividualBookKeeper(); // Need to issue a request for data
     	
     	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
@@ -284,6 +340,7 @@ public class AStarAgent extends TeamClient {
     	}
     	
     	assignedIndividual = bookKeeper.getAssignedIndividual(); // Get the assigned individual
+    	*/
     }
     
     /**
@@ -293,6 +350,7 @@ public class AStarAgent extends TeamClient {
      */
     @Override
     public void shutDown(Toroidal2DPhysics space) {
+    	/*
     	double totalScore = 0.0;
     	double damageRecieved = 0.0;
     	
@@ -304,14 +362,24 @@ public class AStarAgent extends TeamClient {
     	}
     	bookKeeper.assignFitness(totalScore, damageRecieved); // Assign fitness score to the assigned individual
     	bookKeeper.checkAssignedGeneration(); // Check if new generation needs to be created
+    	*/
     }
     
     /**
-     * 
+     * Draws the graphics on screen. Especially help when debugging...
      */
     @Override
     public Set<SpacewarGraphics> getGraphics() {
     	HashSet<SpacewarGraphics> graphics = new HashSet<SpacewarGraphics>();
+    	
+    	if(DEBUG_MODE) {
+    		graphics.addAll(graphicsToAdd);
+    		if(navigator.map.graphDrawing != null) {
+    			graphics.addAll(navigator.map.graphDrawing);
+    		}
+    		graphicsToAdd.clear();
+    	}
+    		
 		return graphics;
     }
 
