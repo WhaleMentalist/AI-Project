@@ -16,12 +16,6 @@ public class Individual {
 	public final AsteroidCollectorChromosome asteroidCollectorChromosome;
 	
 	/**
-	 * Contains chromosome that issues policies pertaining to
-	 * navigation
-	 */
-	public final NavigationChromosome navigationChromosome;
-	
-	/**
 	 * The fitness score the indivdual recieved
 	 */
 	private double fitnessScore;
@@ -32,11 +26,9 @@ public class Individual {
 	 * 
 	 * @param asteroidCollector	a chromosome containing asteroid collection 
 	 * 							policy
-	 * @param navigation	a chromosome containing navigation policy
 	 */
-	public Individual(AsteroidCollectorChromosome asteroidCollector, NavigationChromosome navigation) {
+	public Individual(AsteroidCollectorChromosome asteroidCollector) {
 		asteroidCollectorChromosome = asteroidCollector;
-		navigationChromosome = navigation;
 	}
 	
 	/**
@@ -44,19 +36,11 @@ public class Individual {
 	 * 
 	 * @param energyRefuelThreshold	the amount of fuel before ship needs to find fuel source
 	 * @param cargoholdCapcacity	the amount of resources in cargohold before going back to base
-	 * @param maximumDistanceAsteroid	the maximum distance to consider an asteroid as a candidate
-	 * @param asteroidDistanceResourceRatio	the ratio required to consider an asteroid as a candidate
 	 * @param angleWeight	the weight the angle will have when considering an asteroid in some orientation from ship
-	 * @param maxVelocity	the maximum velocity of ship
-	 * @param minVelocity	the minimum pursuit velocity of ship
-	 * @param obstacleDetection	the range when obstacles are detected by path finding algorithm
+	 * @param baseBuild	the minimum distance needed to build base
 	 */
-	public Individual(int energyRefuelThreshold, int cargoholdCapcacity, double maximumDistanceAsteroid, 
-			double asteroidDistanceResourceRatio, double angleWeight, double maxVelocity, double minVelocity, 
-			double obstacleDetection) {
-		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, maximumDistanceAsteroid, 
-																	asteroidDistanceResourceRatio, angleWeight);
-		navigationChromosome = new NavigationChromosome(maxVelocity, minVelocity, obstacleDetection);
+	public Individual(int energyRefuelThreshold, int cargoholdCapcacity, double angleWeight, double baseBuild) {
+		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, angleWeight, baseBuild);
 	}
 	
 	/**
@@ -64,20 +48,12 @@ public class Individual {
 	 * 
 	 * @param energyRefuelThreshold	the amount of fuel before ship needs to find fuel source
 	 * @param cargoholdCapcacity	the amount of resources in cargohold before going back to base
-	 * @param maximumDistanceAsteroid	the maximum distance to consider an asteroid as a candidate
-	 * @param asteroidDistanceResourceRatio	the ratio required to consider an asteroid as a candidate
 	 * @param angleWeight	the weight the angle will have when considering an asteroid in some orientation from ship
-	 * @param maxVelocity	the maximum velocity of ship
-	 * @param minVelocity	the minimum pursuit velocity of ship
-	 * @param obstacleDetection	the range when obstacles are detected by path finding algorithm
+	 * @param baseBuild	the minimum distance needed to build base
 	 * @param fitness	the fitness score the individual recieved
 	 */
-	public Individual(int energyRefuelThreshold, int cargoholdCapcacity, double maximumDistanceAsteroid, 
-			double asteroidDistanceResourceRatio, double angleWeight, double maxVelocity, double minVelocity, 
-			double obstacleDetection, double fitness) {
-		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, maximumDistanceAsteroid, 
-																	asteroidDistanceResourceRatio, angleWeight);
-		navigationChromosome = new NavigationChromosome(maxVelocity, minVelocity, obstacleDetection);
+	public Individual(int energyRefuelThreshold, int cargoholdCapcacity, double angleWeight, double baseBuild, double fitness) {
+		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, angleWeight, baseBuild);
 		fitnessScore = fitness;
 	}
 	
@@ -102,7 +78,7 @@ public class Individual {
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append(asteroidCollectorChromosome + " " + navigationChromosome + "\n");
+		builder.append(asteroidCollectorChromosome + "\n");
 		return builder.toString();
 	}
 }

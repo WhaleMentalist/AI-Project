@@ -26,12 +26,22 @@ public class WorldState {
 	/**
 	 * Low energy threshold
 	 */
-	public static final double LOW_ENERGY = Ship.SHIP_MAX_ENERGY / 2.0;
+	public final double LOW_ENERGY;
 	
 	/**
 	 * Full cargo for ship to go back to base
 	 */
-	public static final int FULL_CARGO = 4000;
+	public final int FULL_CARGO;
+	
+	/**
+	 * The amount of weight angle will have when finding asteroids
+	 */
+	public final double ANGLE_WEIGHT;
+	
+	/**
+	 * Minimal distance required to build base
+	 */
+	public final double BASE_BUILD_THRESHOLD;
 	
     /**
      * If a maximum velocity is imposed the agent has better
@@ -48,18 +58,6 @@ public class WorldState {
      * Delimits if bases is viable to get energy from
      */
     public static final double SUFFICIENT_BASE_ENERGY = 1000;
-    
-    /**
-     * Any algorithms that perform look-ahead will use this
-     * as max amount (i.e two seconds later in simulation)
-     */
-    public static final double MAX_LOOK_AHEAD = 20;
-    
-    /**
-	 * The individual that was assigned to agent containing the values that 
-	 * will govern the agent. It will be set once in the ladder.
-	 */
-	// public final Individual individual;
 
     /**
      * Simply a reference to use some of the functions (i.e shortest distance, obstructions)
@@ -71,6 +69,11 @@ public class WorldState {
      * finding the closest object (i.e the agent)
      */
     private Ship _referenceShip;
+    
+    /**
+     * The individual containing traits that guide agent's actions
+     */
+    private Individual individual;
 
     /**
      * Initialize <code>WorldState</code> and build data for agent
@@ -80,10 +83,16 @@ public class WorldState {
      * @param ship  the ship belonging to agent
      * @param ind	the individual assigned to the ship
      */
-    public WorldState(Toroidal2DPhysics space, Ship ship) {
+    public WorldState(Toroidal2DPhysics space, Ship ship, Individual ind) {
         _space = space;
         _referenceShip = ship;
-        // individual = ind;
+        individual = ind;
+        
+        // Set traits
+        LOW_ENERGY = individual.asteroidCollectorChromosome.ENERGY_REFUEL_THRESHOLD;
+        FULL_CARGO = individual.asteroidCollectorChromosome.CARGOHOLD_CAPACITY;
+        ANGLE_WEIGHT = individual.asteroidCollectorChromosome.ANGLE_WEIGHT;
+        BASE_BUILD_THRESHOLD = individual.asteroidCollectorChromosome.BASE_BUILD_THRESHOLD;
     }
 
     /**
@@ -232,7 +241,7 @@ public class WorldState {
             angleBetween = Math.toDegrees(Math.abs(pathOfShip.angleBetween(toAsteroid))); // Get angle between asteroid and ship velocity
             
             // Angle the ship velocity to target asteroid also adds to cost as angle increases
-            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist + angleBetween * 5.0);
+            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist + angleBetween * ANGLE_WEIGHT);
             
             if (currentCostEffectiveness > costEffectiveness) { // Check if asteroid closer to ship and clear of obstructions
                 costEffectiveness = currentCostEffectiveness; // Reassign shortest distance

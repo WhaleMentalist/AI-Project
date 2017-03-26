@@ -16,9 +16,8 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 		
 		ENERGY_REFUEL_THRESHOLD_INDEX(0),
 		CARGOHOLD_CAPACITY_INDEX(1),
-		MAXIMUM_DISTANCE_ASTEROID_INDEX(2),
-		ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD_INDEX(3),
-		ANGLE_WEIGHT(4);
+		ANGLE_WEIGHT_INDEX(2),
+		BASE_BUILD_THRESHOLD_INDEX(3);
 		
 		public final int index;
 		
@@ -30,7 +29,7 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 	/**
 	 * The number of components contained in the chromosome
 	 */
-	private final int ALLELE_NUMBER = 5;
+	private final int ALLELE_NUMBER = 4;
 	
 	/**
 	 * The mutation rate that will occur for each allele. In this case
@@ -49,39 +48,31 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 	public final int CARGOHOLD_CAPACITY;
 	
 	/**
-	 * Dictates what distance asteroids are searchable
-	 */
-	public final double MAXIMUM_DISTANCE_ASTEROID;
-	
-	/**
-	 * Dictates a threshold of when to go after asteroid
-	 */
-	public final double ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD;
-	
-	/**
 	 * Dictates the weight the angle will have when attempting to search for
 	 * asteroids
 	 */
 	public final double ANGLE_WEIGHT;
 	
 	/**
+	 * The minimal distance needed to build a new base
+	 */
+	public final double BASE_BUILD_THRESHOLD;
+	
+	/**
 	 * The constructor will create chromosome given parameters
 	 * 
 	 * @param energyRefuelThreshold
 	 * @param cargoholdCapcacity
-	 * @param maximumDistanceAsteroid
-	 * @param asteroidDistanceResourceRatio
 	 * @param angleWeight
+	 * @param baseBuildThreshold
 	 */
 	public AsteroidCollectorChromosome(int energyRefuelThreshold, int cargoholdCapcacity,
-										double maximumDistanceAsteroid, double asteroidDistanceResourceRatio,
-										double angleWeight) {
+										double angleWeight, double baseBuildThreshold) {
 		super();
 		ENERGY_REFUEL_THRESHOLD = energyRefuelThreshold;
 		CARGOHOLD_CAPACITY = cargoholdCapcacity;
-		MAXIMUM_DISTANCE_ASTEROID = maximumDistanceAsteroid;
-		ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD = asteroidDistanceResourceRatio;
 		ANGLE_WEIGHT = angleWeight;
+		BASE_BUILD_THRESHOLD = baseBuildThreshold;
 	}
 	
 	/**
@@ -89,20 +80,18 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 	 * 
 	 * @param energyRefuelThreshold
 	 * @param cargoholdCapcacity
-	 * @param maximumDistanceAsteroid
-	 * @param asteroidDistanceResourceRatio
 	 * @param angleWeight
+	 * @param baseBuildThreshold
 	 * @param fitness
 	 */
 	public AsteroidCollectorChromosome(int energyRefuelThreshold, int cargoholdCapcacity,
 										double maximumDistanceAsteroid, double asteroidDistanceResourceRatio,
-										double angleWeight, double fitness) {
+										double angleWeight, double baseBuildThreshold, double fitness) {
 		super(fitness);
 		ENERGY_REFUEL_THRESHOLD = energyRefuelThreshold;
 		CARGOHOLD_CAPACITY = cargoholdCapcacity;
-		MAXIMUM_DISTANCE_ASTEROID = maximumDistanceAsteroid;
-		ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD = asteroidDistanceResourceRatio;
 		ANGLE_WEIGHT = angleWeight;
+		BASE_BUILD_THRESHOLD = baseBuildThreshold;
 	}
 
 	@Override
@@ -135,23 +124,15 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 			
 			if(crossoverPoint == Alleles.ENERGY_REFUEL_THRESHOLD_INDEX.index) {
 				child = new AsteroidCollectorChromosome(p1.ENERGY_REFUEL_THRESHOLD, p2.CARGOHOLD_CAPACITY, 
-						p2.MAXIMUM_DISTANCE_ASTEROID, p2.ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD, 
-						p2.ANGLE_WEIGHT);
+						p2.ANGLE_WEIGHT, p2.BASE_BUILD_THRESHOLD);
 			}
 			else if(crossoverPoint == Alleles.CARGOHOLD_CAPACITY_INDEX.index) {
 				child = new AsteroidCollectorChromosome(p1.ENERGY_REFUEL_THRESHOLD, p1.CARGOHOLD_CAPACITY, 
-						p2.MAXIMUM_DISTANCE_ASTEROID, p2.ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD, 
-						p2.ANGLE_WEIGHT);
+						p2.ANGLE_WEIGHT, p2.BASE_BUILD_THRESHOLD);
 			}
-			else if(crossoverPoint == Alleles.MAXIMUM_DISTANCE_ASTEROID_INDEX.index) {
+			else if(crossoverPoint == Alleles.ANGLE_WEIGHT_INDEX.index) {
 				child = new AsteroidCollectorChromosome(p1.ENERGY_REFUEL_THRESHOLD, p1.CARGOHOLD_CAPACITY, 
-						p1.MAXIMUM_DISTANCE_ASTEROID, p2.ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD, 
-						p2.ANGLE_WEIGHT);
-			}
-			else if(crossoverPoint == Alleles.ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD_INDEX.index) {
-				child = new AsteroidCollectorChromosome(p1.ENERGY_REFUEL_THRESHOLD, p1.CARGOHOLD_CAPACITY, 
-						p1.MAXIMUM_DISTANCE_ASTEROID, p1.ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD, 
-						p2.ANGLE_WEIGHT);
+						p1.ANGLE_WEIGHT, p2.BASE_BUILD_THRESHOLD);
 			}
 			else {
 				; // Blank on purpose
@@ -192,8 +173,7 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 		// Maintain old values of chromosome
 		int energyThreshold = this.ENERGY_REFUEL_THRESHOLD;
 		int cargoholdCapacity = this.CARGOHOLD_CAPACITY;
-		double maximumDistanceAsteroid = this.MAXIMUM_DISTANCE_ASTEROID;
-		double asteroidDistanceVsResourceRatio = this.ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD;
+		double baseBuild = this.BASE_BUILD_THRESHOLD;
 		double angleWeight = this.ANGLE_WEIGHT;
 		
 		
@@ -208,25 +188,18 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 					IndividualFactory.MAX_CARGOHOLD_RANGE);
 		}
 		
-		if(mutationResult[Alleles.MAXIMUM_DISTANCE_ASTEROID_INDEX.index]) {
-			maximumDistanceAsteroid = Utility.randomDouble(IndividualFactory.MIN_DISTANCE_TO_ASTEROID_RANGE, 
-					IndividualFactory.MAX_DISTANCE_TO_ASTEROID_RANGE);
-		}
-		
-		if(mutationResult[Alleles.ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD_INDEX.index]) {
-			asteroidDistanceVsResourceRatio = 
-					Utility.randomDouble(IndividualFactory.MIN_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE, 
-					IndividualFactory.MAX_ASTEROID_RESOURCE_DISTANCE_RATIO_RANGE);
-		}
-		
-		if(mutationResult[Alleles.ANGLE_WEIGHT.index]) {
+		if(mutationResult[Alleles.ANGLE_WEIGHT_INDEX.index]) {
 			angleWeight = Utility.randomDouble(IndividualFactory.MIN_ANGLE_WEIGHT_RANGE, 
 					IndividualFactory.MAX_ANGLE_WEIGHT_RANGE);
 		}
 		
+		if(mutationResult[Alleles.BASE_BUILD_THRESHOLD_INDEX.index]) {
+			baseBuild = Utility.randomDouble(IndividualFactory.MIN_ANGLE_WEIGHT_RANGE, 
+					IndividualFactory.MAX_ANGLE_WEIGHT_RANGE);
+		}
+		
 		// Construct new chromosome (this is due to immutable implementation)
-		return new AsteroidCollectorChromosome(energyThreshold, cargoholdCapacity, maximumDistanceAsteroid, 
-				asteroidDistanceVsResourceRatio, angleWeight);
+		return new AsteroidCollectorChromosome(energyThreshold, cargoholdCapacity, angleWeight, baseBuild);
 	}
 	
 	/**
@@ -242,8 +215,7 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append(ENERGY_REFUEL_THRESHOLD + " " + CARGOHOLD_CAPACITY + " " +
-						MAXIMUM_DISTANCE_ASTEROID + " " + ASTEROID_DISTANCE_VS_RESOURCE_RATIO_THRESHOLD + " " +
-						ANGLE_WEIGHT);
+						ANGLE_WEIGHT + " " + BASE_BUILD_THRESHOLD);
 		return builder.toString();
 	}
 }

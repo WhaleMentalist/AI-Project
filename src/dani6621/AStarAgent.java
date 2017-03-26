@@ -15,6 +15,7 @@ import spacesettlers.actions.DoNothingAction;
 import spacesettlers.actions.MoveAction;
 import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
+import spacesettlers.clients.ImmutableTeamInfo;
 import spacesettlers.clients.TeamClient;
 import spacesettlers.graphics.SpacewarGraphics;
 import spacesettlers.graphics.StarGraphics;
@@ -49,11 +50,6 @@ public class AStarAgent extends TeamClient {
 	 * when graph search fails
 	 */
 	private static final int MAX_RETRIES = 5;
-	
-	/**
-	 * Constant will delimit whether agent can build a base
-	 */
-	private static final double MINIMUM_BASE_PURCHASE_DISTANCE = 400.0;
 	
 	/**
 	 * Amount of time to wait before creating a new map
@@ -143,9 +139,9 @@ public class AStarAgent extends TeamClient {
             }
         }
         
-        if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
+        if(knowledge.getCurrentEnergy() < knowledge.LOW_ENERGY) { // Get energy when low
             
-        	if(ship.getResources().getTotal() > WorldState.FULL_CARGO / 2) { // Might be better off charging at base
+        	if(ship.getResources().getTotal() > knowledge.FULL_CARGO / 2) { // Might be better off charging at base
         		returnResources(space, ship);
         	}
         	else { // Don't have enough resources to warrant return to base
@@ -160,7 +156,7 @@ public class AStarAgent extends TeamClient {
             				knowledge.calculateInterceptVelocity(source));
             }
         }
-        else if(ship.getResources().getTotal() > WorldState.FULL_CARGO) { // Detect full cargo
+        else if(ship.getResources().getTotal() > knowledge.FULL_CARGO) { // Detect full cargo
             
             returnResources(space, ship);	
             newAction = navigator.retrieveNavigationAction(space, knowledge, ship);
@@ -306,7 +302,7 @@ public class AStarAgent extends TeamClient {
      * @param individual	the individual assigned to agent
      */
     private void perceive(Toroidal2DPhysics space, Ship ship, Individual individual) {
-        knowledge = new WorldState(space, ship);
+        knowledge = new WorldState(space, ship, individual);
     }
     
     /**
@@ -331,7 +327,6 @@ public class AStarAgent extends TeamClient {
     	graphicsToAdd = new ArrayList<SpacewarGraphics>();
     	
     	// The 'IndividualBookKeeper' is much like a librarian with books
-    	/*
     	bookKeeper = new IndividualBookKeeper(); // Need to issue a request for data
     	
     	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
@@ -340,7 +335,6 @@ public class AStarAgent extends TeamClient {
     	}
     	
     	assignedIndividual = bookKeeper.getAssignedIndividual(); // Get the assigned individual
-    	*/
     }
     
     /**
@@ -350,19 +344,16 @@ public class AStarAgent extends TeamClient {
      */
     @Override
     public void shutDown(Toroidal2DPhysics space) {
-    	/*
+    	
     	double totalScore = 0.0;
-    	double damageRecieved = 0.0;
     	
     	for(ImmutableTeamInfo info : space.getTeamInfo()) {
     		if(info.getTeamName().equals("Padawan Daniel and Flood")) {
     			totalScore = info.getScore();
-    			damageRecieved = info.getTotalDamageReceived();
     		}
     	}
-    	bookKeeper.assignFitness(totalScore, damageRecieved); // Assign fitness score to the assigned individual
+    	bookKeeper.assignFitness(totalScore); // Assign fitness score to the assigned individual
     	bookKeeper.checkAssignedGeneration(); // Check if new generation needs to be created
-    	*/
     }
     
     /**
@@ -412,7 +403,7 @@ public class AStarAgent extends TeamClient {
                         }
                     }
 
-                    if (minDist > MINIMUM_BASE_PURCHASE_DISTANCE) { // If the minimum distance is larger than constant then purchase a base
+                    if (minDist > knowledge.BASE_BUILD_THRESHOLD) { // If the minimum distance is larger than constant then purchase a base
                         purchases.put(ship.getId(), PurchaseTypes.BASE);
                         break;
                     }

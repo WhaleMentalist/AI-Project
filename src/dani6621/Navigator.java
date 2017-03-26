@@ -196,7 +196,6 @@ public class Navigator {
 	public List<GraphSearchNode> getCopyPath() {
 		if(path == null) 
 			return null;
-		
 		return (List<GraphSearchNode>) path.clone();
 	}
 	
