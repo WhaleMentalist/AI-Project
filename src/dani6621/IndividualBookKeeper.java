@@ -27,7 +27,7 @@ public class IndividualBookKeeper {
 	 * This is the amount of chromosomes that will be produced 
 	 * in each generation
 	 */
-	public static final int POPULATION_COUNT = 6;
+	public static final int POPULATION_COUNT = 40;
 	
 	/**
 	 * The file extension for knowlodge files
