@@ -192,13 +192,16 @@ public class WorldState {
     }
 
     /**
-     * Function will return the most efficient asteroid in teh simulation (i.e the amount
-     * of resource per unit of distance)
+     * Function will return the most efficient asteroid in the simulation (i.e the amount
+     * of resource per unit of distance).  This function excludes the additional prioritization of 
+     * of objects in front of the ship (angle between calculations).  This is because it is assumed
+     * that selecting objects by clusters will ultimately result in more turning/less movement.  
      * 
-     * @param untouchables objects that will NOT be considered
+     * @param untouchables objects that will NOT be considered. Also a target cluster
+     * that ensures the ship moves to high mineable asteroid density regions of space
      * @return an <code>Asteroid</code> object that is most efficient to ship
      */
-    public Asteroid getMostEfficientMinableAsteroid(Map<UUID, AbstractObject> untouchables) {
+    public Asteroid getMostEfficientMinableAsteroid(Map<UUID, AbstractObject> untouchables, Cluster c) {
         double costEffectiveness = Double.NEGATIVE_INFINITY; // Most effective asteroid (higher is better)
         double dist; // Store distance to object
         double currentCostEffectiveness; // Store the cost effectiveness of current asteroid
@@ -209,15 +212,17 @@ public class WorldState {
         double angleBetween = Math.PI; // Set to maximum angle
 
         for (Asteroid asteroid : getMineableAsteroids()) {
-        	
-        	if(untouchables.containsKey(asteroid.getId())) { // Skip object
+        	UUID current = asteroid.getId();
+        	//Checks if the current asteroid is in our target cluster set.
+        	if(untouchables.containsKey(current) || 
+        			!c.getAsteroids().contains(current)) { // Skip object
         		continue;
         	}
         	
             dist = _space.findShortestDistance(shipPos, asteroid.getPosition());
             toAsteroid = _space.findShortestDistanceVector(shipPos, asteroid.getPosition()); // Get vector pointing from ship to asteroid
             angleBetween = pathOfShip.angleBetween(toAsteroid); // Get angle between asteroid and ship velocity
-            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist * (1.0 + Math.pow(angleBetween, 2.0))); // Cost effectiveness calculation
+            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist); //*(1.0 + Math.pow(angleBetween, 2.0))); // Cost effectiveness calculation
             if (currentCostEffectiveness > costEffectiveness) { // Check if asteroid closer to ship and clear of obstructions
                 costEffectiveness = currentCostEffectiveness; // Reassign shortest distance
                 candidate = asteroid;
@@ -437,5 +442,106 @@ public class WorldState {
         }
 
         return finalVelocity;
+    }
+    
+
+    /**
+     * Function that performs k-means clustering on mineable asteroids. It is assumed
+     * that moving to regions with a higher density of mineable asteroids (in terms of
+     * average dispersion) will result in higher scores.
+     * 
+     * There is a hard cap of 30 iterations on the number
+     * of times the centroid location can change before the function simply returns a cluster.  Testing
+     * has shown that it rarely ever takes more than 7 steps to converge.
+     * 
+     * This function will initialize random centroids for the specified number of k cluster.  Only
+     * one random initialization will occur from a call to this function.  K-means clustering with
+     * restarts can be implemented by nesting function within a for loop and tracking the best cluster.
+     * This can be observed within the AStarAgent java file.
+     * 
+     * @param k number of clusters to be used in the calculation
+     * @return a cluster with the lowest dispersion (as measured by average distance of objects from the
+     * centroid).
+     */
+    public Cluster kmeansClustering(int kClusters){	 	
+    	Random random = new Random();
+    	Position currentPosition = _referenceShip.getPosition();
+    	boolean outerFlag = false;
+    	Cluster[] clusters = new Cluster[kClusters];
+    	
+    	//Initialize Cluster centers
+    	for(int i=0;i<kClusters;i++){
+    		Position initialLocation = _space.getRandomFreeLocationInRegion(random, 0, (int) currentPosition.getX(), 
+				(int) currentPosition.getY(), 500);
+    		clusters[i] = new Cluster((i),initialLocation);
+    	}
+    	
+    	//worst case iterations
+    	int j = 0;
+    	while(j < 30){
+    		
+	    	//Assign asteroids to clusters.
+	    	for (Asteroid asteroid : getMineableAsteroids()){
+	    		double bestDist = Double.MAX_VALUE;
+	    		Position asteroidPosition = asteroid.getPosition();
+	    		int bestCluster = -1;
+	    		
+	    		//Find nearest cluster
+	    		for(int i=0;i<clusters.length;i++){
+	    			double distanceBetween = _space.findShortestDistance(asteroidPosition, clusters[i].getCentroid());
+	    			if(distanceBetween < bestDist){
+	    				bestDist = distanceBetween;
+	    				bestCluster = i;
+	    			}
+	    		}  		
+	    		//Assign to best cluster
+	    		clusters[bestCluster].pushAsteroid(asteroid);	
+	    	}
+	    	
+	    	//Update Cluster Centroids and check if we have converged.
+	    	//if the centroid of the cluster before and after updating
+	    	//is the same, then the test has converged.
+	    	boolean test = true;
+	    	for(Cluster c : clusters){
+	    		Position last = c.getCentroid();
+	    		c.updateCentroid(_space);
+	    		if(!last.equalsLocationOnly(c.getCentroid())){
+	    			test = false;
+	    		}
+	    	}
+	    		
+	    	//Exit loop if test has converged.  Find the best cluster as defined
+	    	//by minimum dispersion and return cluster with lowest dispersion
+	    	if(test){
+	    		int bestCluster=-1;
+	    		double dispersion = Double.MAX_VALUE;
+	    		for(int k=0;k<clusters.length;k++){
+	    			double tempDisp = clusters[k].calculateDispersion(_space);
+	    			if(tempDisp<dispersion){
+	    				bestCluster=k;
+	    				dispersion = tempDisp;
+	    			}
+	    		}  
+	    		return clusters[bestCluster];
+	    	}
+	    	j++;
+	    	
+    	}
+    	//If for some reason we don't converge in the set number of iterations.
+    	//then calculate the best cluster here.
+    	if(outerFlag){
+			int bestCluster=-1;
+			double dispersion = Double.MAX_VALUE;
+			for(int k=0;k<clusters.length;k++){
+				if(dispersion>clusters[k].calculateDispersion(_space)){
+					bestCluster=k;
+					dispersion = clusters[k].calculateDispersion(_space);
+				}
+			}  
+			return clusters[bestCluster];
+	    }
+    	else{
+    		return null;
+    	}  
     }
 }

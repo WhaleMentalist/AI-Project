@@ -50,7 +50,25 @@ public class AStarAgent extends TeamClient {
 	 * Amount of time to wait before creating a new map
 	 */
 	private static final int NEW_MAP_TIMESTEP = 15;
-
+	
+	/**
+	 * Number of clusters to use in the k-means clustering algorithm
+	 */
+	private static final int K_CLUSTERS = 2;
+	
+	/**
+	 * Number of timesteps to use before performing K-means clustering
+	 */
+	private static final int CLUSTER_TIMESTEPS = 500;
+	
+	/**
+	 * Cluster object that will be used for filtering target asteroids to
+	 * control agent movements such that it moves to the highest density
+	 * regions of the map.
+	 */
+	private Cluster targetCluster;
+	
+	
     /**
      * Represents how agent will perceive world state. You can
      * think of this as the percept of the agent.
@@ -115,6 +133,25 @@ public class AStarAgent extends TeamClient {
     public AbstractAction getReflexAgentAction(Toroidal2DPhysics space, Ship ship) {
         AbstractAction newAction = new DoNothingAction();
         perceive(space, ship);
+        
+        
+        //Every 1000th timestep, perform k-means clustering on the mineable asteroids.
+        //This will determine the most densely populated region of space in terms of 
+        //mineable asteroid.  Movement towards dense regions of mineable asteroids will
+        //be prioritized.
+        if(space.getCurrentTimestep()%CLUSTER_TIMESTEPS == 0){   	
+        	double dispersion = Double.MAX_VALUE;
+        	//Five random restarts.  This value is arbitrarily selected.
+        	for(int i = 0;i < 3;i++){
+        		Cluster testCluster = knowledge.kmeansClustering(K_CLUSTERS);
+        		double testDispersion = testCluster.calculateDispersion(space);
+        		if(testDispersion < dispersion){
+        			targetCluster = new Cluster(testCluster);
+        			dispersion = testDispersion;
+        		}
+        	}
+
+        }
         
         if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
             AbstractObject source = knowledge.getClosestEnergySource(unapproachableObject);
@@ -202,7 +239,8 @@ public class AStarAgent extends TeamClient {
         }
         else { // Perform asteroid mining
             // Find closest asteroid to mine
-            Asteroid closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
+
+            Asteroid closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject,targetCluster);
             
             if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
             		
@@ -218,7 +256,7 @@ public class AStarAgent extends TeamClient {
                     			
                     		if(i < MAX_RETRIES) {
                         		unapproachableObject.put(closestAsteroid.getId(), closestAsteroid); // Add as unsolvable
-                    			closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
+                    			closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject, targetCluster);
                     			continue;
                     		}
                     		else {
@@ -266,21 +304,22 @@ public class AStarAgent extends TeamClient {
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
     	
     	// The 'ChromosomeBookKeeper' is much like a librarian with books
-    	bookKeeper = new IndividualBookKeeper(); // Need to issue a request for data
+    	//bookKeeper = new IndividualBookKeeper(); // Need to issue a request for data
     	
     	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
-    	if(bookKeeper.isAssignedChromosome()) {
-    		System.exit(CHROMOSOME_ASSIGNMENT_FAILURE); // Terminate JVM process
-    	}
+    	//if(bookKeeper.isAssignedChromosome()) {
+    	//	System.exit(CHROMOSOME_ASSIGNMENT_FAILURE); // Terminate JVM process
+    	//}
     }
     
     /**
      * Method will perform set of operations at game shutdown...
      * Basically, the genetic algorithm cleanup and calculations
      */
+
     @Override
     public void shutDown(Toroidal2DPhysics space) {
-    	
+    	/*
     	double totalScore = 0;
     	
     	for(ImmutableTeamInfo info : space.getTeamInfo()) {
@@ -289,8 +328,9 @@ public class AStarAgent extends TeamClient {
     		}
     	}
     	bookKeeper.assignFitness(totalScore);
+    	*/
     }
-    
+
     /**
      * 
      */
