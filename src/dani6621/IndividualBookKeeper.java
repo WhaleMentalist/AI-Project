@@ -52,12 +52,12 @@ public class IndividualBookKeeper {
 	/**
 	 * Number of tokens for unassigned individual
 	 */
-	private static final int UNASSIGNED = 8;
+	private static final int UNASSIGNED = 4;
 	
 	/**
 	 * Number of tokens for individual assigned a score
 	 */
-	private static final int SCORE_ASSIGNED = 10;
+	private static final int SCORE_ASSIGNED = 6;
 	
 	/**
 	 * Holds the path to file holding assigned generation
@@ -219,12 +219,9 @@ public class IndividualBookKeeper {
 				if(tokens != null && tokens.length == UNASSIGNED && assignedIndividualID < 1) {
 					line += " A\n"; // Append an assigned token at end of 'line'
 					assignedIndividualID = individualCounter;
-					
 					// Construct the 'Individual' object from file data
 					assignedIndividual = new Individual(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]),
-													Double.parseDouble(tokens[2]), Double.parseDouble(tokens[3]),
-													Double.parseDouble(tokens[4]), Double.parseDouble(tokens[5]), 
-													Double.parseDouble(tokens[6]), Double.parseDouble(tokens[7]));
+													Double.parseDouble(tokens[2]), Double.parseDouble(tokens[3]));
 				}
 				else { // Got to append a return line
 					line += "\n";
@@ -253,7 +250,7 @@ public class IndividualBookKeeper {
 	 * @param score	the score the agent recieved at the end of the game
 	 * @param damageRecieved	the amount of damage the agent recieved
 	 */
-	public void assignFitness(double score, double damageRecieved) {
+	public void assignFitness(double score) {
 		
 		try {
 			// This is just a convention you have to follow if you want to make read and write synchronized
@@ -283,9 +280,7 @@ public class IndividualBookKeeper {
 				
 				if(currentChromosome == assignedIndividualID) {
 					assignedIndividual.asteroidCollectorChromosome.calculateFitness(score);
-					assignedIndividual.navigationChromosome.calculateFitness(score, damageRecieved);
-					totalFitness = assignedIndividual.asteroidCollectorChromosome.getFitnessScore() +
-										assignedIndividual.navigationChromosome.getFitnessScore();
+					totalFitness = assignedIndividual.asteroidCollectorChromosome.getFitnessScore();
 					line += " " + totalFitness + "\n";
 				}
 				else { // Got to append a return line
@@ -353,9 +348,7 @@ public class IndividualBookKeeper {
 				// Create individual from file data
 				individuals[individualCounter] = new Individual(Integer.parseInt(tokens[0]), 
 						Integer.parseInt(tokens[1]), Double.parseDouble(tokens[2]), 
-						Double.parseDouble(tokens[3]), Double.parseDouble(tokens[4]), 
-						Double.parseDouble(tokens[5]), Double.parseDouble(tokens[6]), 
-						Double.parseDouble(tokens[7]), Double.parseDouble(tokens[9]));
+						Double.parseDouble(tokens[3]), Double.parseDouble(tokens[5]));
 				
 				line = bufferedReader.readLine(); // Read next line
 				++individualCounter;

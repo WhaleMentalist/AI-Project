@@ -111,7 +111,6 @@ public class Population {
 		
 		// Declare variable to hold reference to newly created chromosome
 		AsteroidCollectorChromosome newAsteroidCollector;
-		NavigationChromosome newNavigation;
 		
 		// Fill next generation population
 		for(int i = 0; i < populationSize; ++i) {
@@ -120,11 +119,9 @@ public class Population {
 			// Crossover chromosomes
 			newAsteroidCollector = (AsteroidCollectorChromosome) (selected[FIRST_PARENT].asteroidCollectorChromosome.
 										crossover(selected[SECOND_PARENT].asteroidCollectorChromosome)).mutation();
-			newNavigation = (NavigationChromosome) (selected[FIRST_PARENT].navigationChromosome.
-										crossover(selected[SECOND_PARENT].navigationChromosome)).mutation();
 			
 			// Create new individual from breeding
-			newGeneration[i] = new Individual(newAsteroidCollector, newNavigation); 
+			newGeneration[i] = new Individual(newAsteroidCollector); 
 		}
 		
 		return newGeneration;
