@@ -44,7 +44,7 @@ public class AStarAgent extends TeamClient {
 	/**
 	 * Constant will delimit whether agent can build a base
 	 */
-	private static final double MINIMUM_BASE_PURCHASE_DISTANCE = 400.0;
+	private static double minimum_base_purchase_distance = 400.0;
 	
 	/**
 	 * Amount of time to wait before creating a new map
@@ -54,7 +54,7 @@ public class AStarAgent extends TeamClient {
 	/**
 	 * Number of clusters to use in the k-means clustering algorithm
 	 */
-	private static final int K_CLUSTERS = 3;
+	private static final int K_CLUSTERS = 1;
 	
 	/**
 	 * Number of timesteps to use before performing K-means clustering
@@ -88,7 +88,7 @@ public class AStarAgent extends TeamClient {
      * Ideally, the genetic algorithm will produce the optimal chromosome after
      * enough iterations (generations).
      */
-    private IndividualBookKeeper bookKeeper;
+    private SABookKeeper bookKeeper;
     
     /**
      * Data member will contain objects that could not be 
@@ -303,13 +303,11 @@ public class AStarAgent extends TeamClient {
     	navigator = new Navigator();
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
     	
-    	// The 'ChromosomeBookKeeper' is much like a librarian with books
-    	//bookKeeper = new IndividualBookKeeper(); // Need to issue a request for data
+    	// Simulated annealing bookkeper
+    	bookKeeper = new SABookKeeper(); // Call intialize function which reads file
+    	minimum_base_purchase_distance = bookKeeper.getThreshold();
     	
-    	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
-    	//if(bookKeeper.isAssignedChromosome()) {
-    	//	System.exit(CHROMOSOME_ASSIGNMENT_FAILURE); // Terminate JVM process
-    	//}
+    	
     }
     
     /**
@@ -319,7 +317,7 @@ public class AStarAgent extends TeamClient {
 
     @Override
     public void shutDown(Toroidal2DPhysics space) {
-    	/*
+    	
     	double totalScore = 0;
     	
     	for(ImmutableTeamInfo info : space.getTeamInfo()) {
@@ -327,8 +325,10 @@ public class AStarAgent extends TeamClient {
     			totalScore = info.getScore();
     		}
     	}
+    	
+    	//Update the simulated annealing file
     	bookKeeper.assignFitness(totalScore);
-    	*/
+    	
     }
 
     /**
@@ -369,7 +369,7 @@ public class AStarAgent extends TeamClient {
                         }
                     }
 
-                    if (minDist > MINIMUM_BASE_PURCHASE_DISTANCE) { // If the minimum distance is larger than constant then purchase a base
+                    if (minDist > minimum_base_purchase_distance) { // If the minimum distance is larger than constant then purchase a base
                         purchases.put(ship.getId(), PurchaseTypes.BASE);
                         break;
                     }
