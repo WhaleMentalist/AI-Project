@@ -54,7 +54,7 @@ public class AStarAgent extends TeamClient {
 	/**
 	 * Number of clusters to use in the k-means clustering algorithm
 	 */
-	private static final int K_CLUSTERS = 2;
+	private static final int K_CLUSTERS = 3;
 	
 	/**
 	 * Number of timesteps to use before performing K-means clustering
