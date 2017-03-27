@@ -194,8 +194,8 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 		}
 		
 		if(mutationResult[Alleles.BASE_BUILD_THRESHOLD_INDEX.index]) {
-			baseBuild = Utility.randomDouble(IndividualFactory.MIN_ANGLE_WEIGHT_RANGE, 
-					IndividualFactory.MAX_ANGLE_WEIGHT_RANGE);
+			baseBuild = Utility.randomDouble(IndividualFactory.MIN_BASE_BUILD_DISTANCE_RANGE, 
+					IndividualFactory.MAX_BASE_BUILD_DISTANCE_RANGE);
 		}
 		
 		// Construct new chromosome (this is due to immutable implementation)
