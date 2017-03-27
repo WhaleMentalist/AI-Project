@@ -27,7 +27,7 @@ public class IndividualBookKeeper {
 	 * This is the amount of chromosomes that will be produced 
 	 * in each generation
 	 */
-	public static final int POPULATION_COUNT = 40;
+	public static final int POPULATION_COUNT = 50;
 	
 	/**
 	 * The file extension for knowlodge files
@@ -52,12 +52,12 @@ public class IndividualBookKeeper {
 	/**
 	 * Number of tokens for unassigned individual
 	 */
-	private static final int UNASSIGNED = 4;
+	private static final int UNASSIGNED = 6;
 	
 	/**
 	 * Number of tokens for individual assigned a score
 	 */
-	private static final int SCORE_ASSIGNED = 6;
+	private static final int SCORE_ASSIGNED = 8;
 	
 	/**
 	 * Holds the path to file holding assigned generation
@@ -221,7 +221,8 @@ public class IndividualBookKeeper {
 					assignedIndividualID = individualCounter;
 					// Construct the 'Individual' object from file data
 					assignedIndividual = new Individual(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]),
-													Double.parseDouble(tokens[2]), Double.parseDouble(tokens[3]));
+													Double.parseDouble(tokens[2]), Double.parseDouble(tokens[3]), 
+													Integer.parseInt(tokens[4]), Double.parseDouble(tokens[5]));
 				}
 				else { // Got to append a return line
 					line += "\n";
@@ -348,7 +349,8 @@ public class IndividualBookKeeper {
 				// Create individual from file data
 				individuals[individualCounter] = new Individual(Integer.parseInt(tokens[0]), 
 						Integer.parseInt(tokens[1]), Double.parseDouble(tokens[2]), 
-						Double.parseDouble(tokens[3]), Double.parseDouble(tokens[5]));
+						Double.parseDouble(tokens[3]), Integer.parseInt(tokens[4]), Double.parseDouble(tokens[5]),
+						Double.parseDouble(tokens[5]));
 				
 				line = bufferedReader.readLine(); // Read next line
 				++individualCounter;

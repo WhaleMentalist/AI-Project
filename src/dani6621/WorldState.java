@@ -43,6 +43,18 @@ public class WorldState {
 	 */
 	public final double BASE_BUILD_THRESHOLD;
 	
+	/**
+	 * Dictates a threshold of when ship should rendezvous back to 
+	 * base when it needs energy and return resources
+	 */
+	public final int RENDEZVOUS_CARGO_HOLD_CAPACITY;
+	
+	/**
+	 * Distance required to rendezvous back to base when it needs to 
+	 * attain energy and return resources
+	 */
+	public final double MINIMAL_RENDEZVOUS_DISTANCE;
+	
     /**
      * If a maximum velocity is imposed the agent has better
      * control
@@ -73,7 +85,7 @@ public class WorldState {
     /**
      * The individual containing traits that guide agent's actions
      */
-    private Individual individual;
+    private final Individual individual;
 
     /**
      * Initialize <code>WorldState</code> and build data for agent
@@ -93,6 +105,8 @@ public class WorldState {
         FULL_CARGO = individual.asteroidCollectorChromosome.CARGOHOLD_CAPACITY;
         ANGLE_WEIGHT = individual.asteroidCollectorChromosome.ANGLE_WEIGHT;
         BASE_BUILD_THRESHOLD = individual.asteroidCollectorChromosome.BASE_BUILD_THRESHOLD;
+        RENDEZVOUS_CARGO_HOLD_CAPACITY = individual.asteroidCollectorChromosome.RENDEZVOUS_CARGO_HOLD_CAPACITY;
+        MINIMAL_RENDEZVOUS_DISTANCE = individual.asteroidCollectorChromosome.MINIMAL_RENDEZVOUS_DISTANCE;
     }
 
     /**

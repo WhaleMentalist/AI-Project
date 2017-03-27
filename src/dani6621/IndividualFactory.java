@@ -9,16 +9,16 @@ package dani6621;
 public class IndividualFactory {
 	
 	/**
-	 * Maximum range for energy threshold constant when generating
-	 * random values
-	 */
-	public static final int MAX_ENERGY_RANGE = 4500;
-	
-	/**
 	 * Minimum range for energy threshold constant when generating
 	 * random values
 	 */
 	public static final int MIN_ENERGY_RANGE = 500;
+	
+	/**
+	 * Maximum range for energy threshold constant when generating
+	 * random values
+	 */
+	public static final int MAX_ENERGY_RANGE = 4500;
 	
 	/**
 	 * Minimum range for cargohold capacity constant when generating
@@ -42,7 +42,7 @@ public class IndividualFactory {
 	 * Maximum range for base building distance constant when generating
 	 * random values
 	 */
-	public static final double MAX_BASE_BUILD_DISTANCE_RANGE = 800.0;
+	public static final double MAX_BASE_BUILD_DISTANCE_RANGE = 1000.0;
 	
 	/**
 	 * Minimum range for ship building constant when generating
@@ -69,6 +69,26 @@ public class IndividualFactory {
 	public static final double MAX_ANGLE_WEIGHT_RANGE = 20.0;
 	
 	/**
+	 * Minimal range for rendezvous cargohold capacity
+	 */
+	public static final int MIN_RENDEZVOUS_CARGOHOLD_RANGE = 0;
+	
+	/**
+	 * Maximum range for rendezvous cargohold capacity
+	 */
+	public static final int MAX_RENDEZVOUS_CARGOHOLD_RANGE = 9000;
+	
+	/**
+	 * Minimal range for rendezvous distance
+	 */
+	public static final double MIN_RENDEZVOUS_DISTANCE = 100.0;
+	
+	/**
+	 * Maximum range for rendezvous distance
+	 */
+	public static final double MAX_RENDEZVOUS_DISTANCE = 1000.0;
+	
+	/**
 	 * Method will create <code>Individual</code>
 	 * 
 	 * @return	the created individual
@@ -81,8 +101,11 @@ public class IndividualFactory {
 		int cargoholdCapacity = Utility.randomInteger(MIN_CARGOHOLD_RANGE, MAX_CARGOHOLD_RANGE);
 		double angleWeight = Utility.randomDouble(MIN_ANGLE_WEIGHT_RANGE, MAX_ANGLE_WEIGHT_RANGE);
 		double baseBuild = Utility.randomDouble(MIN_BASE_BUILD_DISTANCE_RANGE, MAX_BASE_BUILD_DISTANCE_RANGE);
+		int rendezvousCargohold = Utility.randomInteger(MIN_RENDEZVOUS_CARGOHOLD_RANGE, MAX_RENDEZVOUS_CARGOHOLD_RANGE);
+		double rendezvousDistance = Utility.randomDouble(MIN_RENDEZVOUS_DISTANCE, MAX_RENDEZVOUS_DISTANCE);
 			
-		asteroidCollector =  new AsteroidCollectorChromosome(energyThreshold, cargoholdCapacity, angleWeight, baseBuild);
+		asteroidCollector =  new AsteroidCollectorChromosome(energyThreshold, cargoholdCapacity, angleWeight, baseBuild,
+																rendezvousCargohold, rendezvousDistance);
 		
 		return new Individual(asteroidCollector);
 	}

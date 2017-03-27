@@ -141,7 +141,9 @@ public class AStarAgent extends TeamClient {
         
         if(knowledge.getCurrentEnergy() < knowledge.LOW_ENERGY) { // Get energy when low
             
-        	if(ship.getResources().getTotal() > knowledge.FULL_CARGO / 2) { // Might be better off charging at base
+        	if(ship.getResources().getTotal() > knowledge.RENDEZVOUS_CARGO_HOLD_CAPACITY && 
+        			space.findShortestDistance(ship.getPosition(), knowledge.getClosestFriendlyBase().getPosition()) <
+        						knowledge.MINIMAL_RENDEZVOUS_DISTANCE) { // Might be better off charging at base
         		returnResources(space, ship);
         	}
         	else { // Don't have enough resources to warrant return to base

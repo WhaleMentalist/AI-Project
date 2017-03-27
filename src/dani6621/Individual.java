@@ -38,9 +38,13 @@ public class Individual {
 	 * @param cargoholdCapcacity	the amount of resources in cargohold before going back to base
 	 * @param angleWeight	the weight the angle will have when considering an asteroid in some orientation from ship
 	 * @param baseBuild	the minimum distance needed to build base
+	 * @param rendezvousCargohold	the cargohold threshold when ship will go back to base for energy and dropoff resources
+	 * @param	minimalRendezvousDistance	the minimal distance needed in order to allow a rendezvous
 	 */
-	public Individual(int energyRefuelThreshold, int cargoholdCapcacity, double angleWeight, double baseBuild) {
-		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, angleWeight, baseBuild);
+	public Individual(int energyRefuelThreshold, int cargoholdCapcacity, double angleWeight, double baseBuild, int rendezvousCargohold,
+						double minimalRendezvousDistance) {
+		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, angleWeight, baseBuild,
+																		rendezvousCargohold, minimalRendezvousDistance);
 	}
 	
 	/**
@@ -50,10 +54,14 @@ public class Individual {
 	 * @param cargoholdCapcacity	the amount of resources in cargohold before going back to base
 	 * @param angleWeight	the weight the angle will have when considering an asteroid in some orientation from ship
 	 * @param baseBuild	the minimum distance needed to build base
+	 * @param rendezvousCargohold	the cargohold threshold when ship will go back to base for energy and dropoff resources
+	 * @param minimalRendezvousDistance	the minimal distance needed in order to allow a rendezvous
 	 * @param fitness	the fitness score the individual recieved
 	 */
-	public Individual(int energyRefuelThreshold, int cargoholdCapcacity, double angleWeight, double baseBuild, double fitness) {
-		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, angleWeight, baseBuild);
+	public Individual(int energyRefuelThreshold, int cargoholdCapcacity, double angleWeight, double baseBuild, 
+			int rendezvousCargohold, double minimalRendezvousDistance, double fitness) {
+		asteroidCollectorChromosome = new AsteroidCollectorChromosome(energyRefuelThreshold, cargoholdCapcacity, angleWeight, baseBuild,
+																		rendezvousCargohold, minimalRendezvousDistance);
 		fitnessScore = fitness;
 	}
 	
