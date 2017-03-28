@@ -34,6 +34,11 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 	private final int ALLELE_NUMBER = 6;
 	
 	/**
+	 * The crossover rate that will occur when two parents are selected for crossover
+	 */
+	private final double CROSSOVER_RATE = 0.7;
+	
+	/**
 	 * The mutation rate that will occur for each allele. In this case
 	 * a 5% chance.
 	 */
@@ -124,11 +129,17 @@ public class AsteroidCollectorChromosome extends AbstractChromosome {
 		
 		AsteroidCollectorChromosome child = null;
 		
-		// Generate random crossover point (i.e better diversity)
-		int crossoverPoint = Utility.randomInteger(0, ALLELE_NUMBER - 2);
-		child = (AsteroidCollectorChromosome) this.crossoverHelper(chromosome, crossoverPoint);
-
-		return child;
+		// Apply some randomness to crossover chance
+		double crossoverRoll = Utility.randomDouble(0.0, 1.0);
+		
+		// Create a new chromosome
+		if(crossoverRoll < CROSSOVER_RATE) {
+			// Generate random crossover point (i.e better diversity)
+			int crossoverPoint = Utility.randomInteger(0, ALLELE_NUMBER - 2);
+			child = (AsteroidCollectorChromosome) this.crossoverHelper(chromosome, crossoverPoint);
+		}
+		
+		return child; // This can be 'null' or a new chromosome
 	}
 	
 

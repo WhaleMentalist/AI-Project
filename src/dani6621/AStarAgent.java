@@ -43,7 +43,7 @@ public class AStarAgent extends TeamClient {
 	/**
 	 * Toggle whether to activate agent in training mode or normal mode
 	 */
-	private static final boolean TRAINING_MODE = false;
+	private static final boolean TRAINING_MODE = true;
 	
 	/**
 	 * Error code for lack of chromosome assignment

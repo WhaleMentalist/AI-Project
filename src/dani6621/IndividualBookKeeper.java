@@ -27,7 +27,7 @@ public class IndividualBookKeeper {
 	 * This is the amount of chromosomes that will be produced 
 	 * in each generation
 	 */
-	public static final int POPULATION_COUNT = 50;
+	public static final int POPULATION_COUNT = 10;
 	
 	/**
 	 * The file extension for knowlodge files
@@ -338,10 +338,11 @@ public class IndividualBookKeeper {
 			int individualCounter = 0; // Keep track of where we are at in file and for indexing
 			
 			// Go to the end of the file
-			while(line != null) {
+			while(line != null && individualCounter < POPULATION_COUNT) {
 				tokens = line.split("\\s+"); // Split on any number of whitespace
 				
 				if(tokens != null && tokens.length != SCORE_ASSIGNED) {
+					System.out.println(line);
 					allAssigned = false;
 					break; // Found instance that is not assigned we can stop
 				}
@@ -350,7 +351,7 @@ public class IndividualBookKeeper {
 				individuals[individualCounter] = new Individual(Integer.parseInt(tokens[0]), 
 						Integer.parseInt(tokens[1]), Double.parseDouble(tokens[2]), 
 						Double.parseDouble(tokens[3]), Integer.parseInt(tokens[4]), Double.parseDouble(tokens[5]),
-						Double.parseDouble(tokens[5]));
+						Double.parseDouble(tokens[7]));
 				
 				line = bufferedReader.readLine(); // Read next line
 				++individualCounter;
@@ -360,7 +361,7 @@ public class IndividualBookKeeper {
 			
 			// We need to create a new generation
 			if(allAssigned) {
-				
+				System.out.println("All assigned... Creating generation...");
 				// Construct population objects to perform genetic algorithm calculations
 				Population currentGeneration = new Population(individuals);
 				createNextGeneration(currentGeneration);
