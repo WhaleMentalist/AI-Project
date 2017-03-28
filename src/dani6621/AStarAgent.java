@@ -41,6 +41,11 @@ public class AStarAgent extends TeamClient {
 	private static final boolean DEBUG_MODE = false;
 	
 	/**
+	 * Toggle whether to activate agent in training mode or normal mode
+	 */
+	private static final boolean TRAINING_MODE = true;
+	
+	/**
 	 * Error code for lack of chromosome assignment
 	 */
 	private static final int CHROMOSOME_ASSIGNMENT_FAILURE = -1;
@@ -141,12 +146,13 @@ public class AStarAgent extends TeamClient {
         
         if(knowledge.getCurrentEnergy() < knowledge.LOW_ENERGY) { // Get energy when low
             
+        	// Allow rendezvos behavior when ship has sufficient cargohold
         	if(ship.getResources().getTotal() > knowledge.RENDEZVOUS_CARGO_HOLD_CAPACITY && 
         			space.findShortestDistance(ship.getPosition(), knowledge.getClosestFriendlyBase().getPosition()) <
         						knowledge.MINIMAL_RENDEZVOUS_DISTANCE) { // Might be better off charging at base
         		returnResources(space, ship);
         	}
-        	else { // Don't have enough resources to warrant return to base
+        	else { // Don't have enough resources to warrant return to base, simply find closest energy source
         		retrieveEnergy(space, ship);
         	}
         	
@@ -328,15 +334,24 @@ public class AStarAgent extends TeamClient {
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
     	graphicsToAdd = new ArrayList<SpacewarGraphics>();
     	
-    	// The 'IndividualBookKeeper' is much like a librarian with books
-    	bookKeeper = new IndividualBookKeeper(); // Need to issue a request for data
-    	
-    	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
-    	if(!(bookKeeper.isAssignedChromosome())) {
-    		System.exit(CHROMOSOME_ASSIGNMENT_FAILURE); // Terminate JVM process
+    	if(TRAINING_MODE) {
+    		// The 'IndividualBookKeeper' is much like a librarian with books
+        	bookKeeper = new IndividualBookKeeper(); // Need to issue a request for data
+        	
+        	// If a chromosome was not assigned, simply terminate the program (i.e kill JVM)
+        	if(!(bookKeeper.isAssignedChromosome())) {
+        		System.exit(CHROMOSOME_ASSIGNMENT_FAILURE); // Terminate JVM process
+        	}
+        	
+        	assignedIndividual = bookKeeper.getAssignedIndividual(); // Get the assigned individual
+        	System.out.println(assignedIndividual.toString());
+    	}
+    	else { // Use best candidate from training
+    		System.out.println("Launching in non-training mode...");
+    		assignedIndividual = new Individual(new AsteroidCollectorChromosome(2772, 4116, 
+    				2.9380370693515476, 379.139308885403, 8492, 719.07326653848031));
     	}
     	
-    	assignedIndividual = bookKeeper.getAssignedIndividual(); // Get the assigned individual
     }
     
     /**
@@ -346,16 +361,17 @@ public class AStarAgent extends TeamClient {
      */
     @Override
     public void shutDown(Toroidal2DPhysics space) {
-    	
-    	double totalScore = 0.0;
-    	
-    	for(ImmutableTeamInfo info : space.getTeamInfo()) {
-    		if(info.getTeamName().equals("Padawan Daniel and Flood")) {
-    			totalScore = info.getScore();
-    		}
+    	if(TRAINING_MODE) {
+    		double totalScore = 0.0;
+        	
+        	for(ImmutableTeamInfo info : space.getTeamInfo()) {
+        		if(info.getTeamName().equals("Padawan Daniel and Flood")) {
+        			totalScore = info.getScore();
+        		}
+        	}
+        	bookKeeper.assignFitness(totalScore); // Assign fitness score to the assigned individual
+        	bookKeeper.checkAssignedGeneration(); // Check if new generation needs to be created
     	}
-    	bookKeeper.assignFitness(totalScore); // Assign fitness score to the assigned individual
-    	bookKeeper.checkAssignedGeneration(); // Check if new generation needs to be created
     }
     
     /**
