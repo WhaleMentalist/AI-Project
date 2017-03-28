@@ -68,7 +68,7 @@ public class SABookKeeper {
 	/**
 	 * The name delimiting each knowledge file
 	 */
-	private static final String KNOWLEDGE_FILE_BASE_NAME = "generation";
+	private static final String KNOWLEDGE_FILE_BASE_NAME = "generation2";
 		
 	/**
 	 * Holds the path to file holding assigned generation
@@ -102,7 +102,7 @@ public class SABookKeeper {
 	public SABookKeeper() {
 		assignedGeneration = "";
 		base_build_threshold = -1;
-		temperature = 1000;
+		temperature = 1500;
 		best_threshold = 0;
 		best_score = -1;
 		
@@ -145,6 +145,7 @@ public class SABookKeeper {
 			}
 		}
 		
+		//Create the file path
 		assignedGeneration = new String(projectPath.toString() + KNOWLEDGE_DIRECTORY_NAME + KNOWLEDGE_FILE_BASE_NAME + 
 				EXTENSION);
 		
@@ -167,9 +168,9 @@ public class SABookKeeper {
 	
 				//Create intial random values
 				//Temperature always starts at 1000
-				int base_threshold = Utility.randomInteger(50, 1000);
+				int base_threshold = Utility.randomInteger(20, 1000);
 				base_build_threshold = base_threshold;
-				String gen1 = base_threshold + " 1000.0";
+				String gen1 = base_threshold + " 1500.0";
 				
 				fileChannel.write(ByteBuffer.wrap(gen1.getBytes()));
 				
@@ -284,7 +285,7 @@ public class SABookKeeper {
 			//determined by the temperature
 			else{
 				double guess = Math.random();
-				double cutoff = Math.exp((score-best_score)/temperature);
+				double cutoff = Math.exp((score-best_score)/(2*temperature));
 				//If Math.random (0-1) is LESS THAN our energy change, then we 
 				//make the move, otherwise, we keep our previous best.  Note that 
 				//as score-best_score increases, cutoff decreases, thus making moves
@@ -292,7 +293,8 @@ public class SABookKeeper {
 				//have the exact same effect.
 				if(guess<cutoff){
 					String add = " "+score+" B\n";
-					best_score = score;					
+					best_score = score;	
+					best_threshold = base_build_threshold;
 					fileChannel.write(ByteBuffer.wrap(add.getBytes()));			
 				}
 				else{
@@ -304,10 +306,10 @@ public class SABookKeeper {
 			//Generate a new threshold based on our best value and decrement the
 			//temperature according to the cooling schedule. Here, we will have
 			//the cooling schedule be T *= .95.  Write these values to the file
-			//Threshold can be in the interval of +/- 80 timesteps from the 
+			//Threshold can be in the interval of +/- 100 units from the 
 			//best threshold.  Each value within this interval is distributed 
 			//according to a uniform distribution.
-			int newThreshold = best_threshold + Utility.randomInteger(-80,80);
+			int newThreshold = best_threshold + Utility.randomInteger(-100,100);
 			if(newThreshold<0){
 				newThreshold = 1;
 			}

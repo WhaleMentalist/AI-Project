@@ -304,8 +304,9 @@ public class AStarAgent extends TeamClient {
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
     	
     	// Simulated annealing bookkeper
-    	bookKeeper = new SABookKeeper(); // Call intialize function which reads file
+    	bookKeeper = new SABookKeeper(); // Call initialize function which reads file
     	minimum_base_purchase_distance = bookKeeper.getThreshold();
+    	System.out.println("Distance Threshold is: " + minimum_base_purchase_distance);
     	
     	
     }
