@@ -47,6 +47,18 @@ public class AStarAgent extends TeamClient {
 	private static double minimum_base_purchase_distance = 400.0;
 	
 	/**
+	 * Constant that will add a multiple to ship speed to try and
+	 * score more points
+	 */
+	private static double speed_multiplier = 1;
+	
+	/**
+	 * Constant that will prioritize asteroids that are closer to the
+	 * direction the ship is already heading
+	 */
+	private static double angle_weight = 1;
+	
+	/**
 	 * Amount of time to wait before creating a new map
 	 */
 	private static final int NEW_MAP_TIMESTEP = 15;
@@ -54,19 +66,19 @@ public class AStarAgent extends TeamClient {
 	/**
 	 * Number of clusters to use in the k-means clustering algorithm
 	 */
-	private static final int K_CLUSTERS = 1;
+	//private static final int K_CLUSTERS = 1;
 	
 	/**
 	 * Number of timesteps to use before performing K-means clustering
 	 */
-	private static final int CLUSTER_TIMESTEPS = 500;
+	//private static final int CLUSTER_TIMESTEPS = 500;
 	
 	/**
 	 * Cluster object that will be used for filtering target asteroids to
 	 * control agent movements such that it moves to the highest density
 	 * regions of the map.
 	 */
-	private Cluster targetCluster;
+	//private Cluster targetCluster;
 	
 	
     /**
@@ -134,11 +146,7 @@ public class AStarAgent extends TeamClient {
         AbstractAction newAction = new DoNothingAction();
         perceive(space, ship);
         
-        
-        //Every 1000th timestep, perform k-means clustering on the mineable asteroids.
-        //This will determine the most densely populated region of space in terms of 
-        //mineable asteroid.  Movement towards dense regions of mineable asteroids will
-        //be prioritized.
+        /*  - Code for K-Means Clustering
         if(space.getCurrentTimestep()%CLUSTER_TIMESTEPS == 0){   	
         	double dispersion = Double.MAX_VALUE;
         	//Five random restarts.  This value is arbitrarily selected.
@@ -150,8 +158,7 @@ public class AStarAgent extends TeamClient {
         			dispersion = testDispersion;
         		}
         	}
-
-        }
+        }*/
         
         if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
             AbstractObject source = knowledge.getClosestEnergySource(unapproachableObject);
@@ -240,7 +247,7 @@ public class AStarAgent extends TeamClient {
         else { // Perform asteroid mining
             // Find closest asteroid to mine
 
-            Asteroid closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject,targetCluster);
+            Asteroid closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
             
             if(closestAsteroid != null) { // If we could find one cancel any move to random locations actions
             		
@@ -256,7 +263,7 @@ public class AStarAgent extends TeamClient {
                     			
                     		if(i < MAX_RETRIES) {
                         		unapproachableObject.put(closestAsteroid.getId(), closestAsteroid); // Add as unsolvable
-                    			closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject, targetCluster);
+                    			closestAsteroid = knowledge.getMostEfficientMinableAsteroid(unapproachableObject);
                     			continue;
                     		}
                     		else {
@@ -282,6 +289,8 @@ public class AStarAgent extends TeamClient {
      */
     private void perceive(Toroidal2DPhysics space, Ship ship) {
         knowledge = new WorldState(space, ship);
+        knowledge.SPEED_MULTIPLIER = speed_multiplier;
+        knowledge.ANGLE_WEIGHT = angle_weight;
     }
     
     /**
@@ -294,7 +303,7 @@ public class AStarAgent extends TeamClient {
     
     /**
      * This will initialize any pieces of data the agent needs before the game 
-     * starts. An example is the chromosome or the navigator.
+     * starts. Also calls the SABookKeeper constructor.
      */
     @Override
     public void initialize(Toroidal2DPhysics space) {
@@ -306,7 +315,12 @@ public class AStarAgent extends TeamClient {
     	// Simulated annealing bookkeper
     	bookKeeper = new SABookKeeper(); // Call initialize function which reads file
     	minimum_base_purchase_distance = bookKeeper.getThreshold();
+    	speed_multiplier = bookKeeper.getSpeedMultiplier();
+    	angle_weight = bookKeeper.getAngleWeight();
+    	
     	System.out.println("Distance Threshold is: " + minimum_base_purchase_distance);
+    	System.out.println("Speed Multiplier is: " +speed_multiplier);
+    	System.out.println("Angle Weight is: " + angle_weight);
     	
     	
     }
@@ -343,7 +357,7 @@ public class AStarAgent extends TeamClient {
 
     /**
      * Function will allow the ship to build bases once it is a certain
-     * minimum distance away from all distances
+     * minimum distance away from all distances.
      */
     @Override
     public Map<UUID, PurchaseTypes> getTeamPurchases(Toroidal2DPhysics space,
@@ -377,7 +391,6 @@ public class AStarAgent extends TeamClient {
                 }
             }
         }
-
 
         return purchases;
     }

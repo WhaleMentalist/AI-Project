@@ -49,6 +49,17 @@ public class WorldState {
      * as max amount (i.e two seconds later in simulation)
      */
     public static final double MAX_LOOK_AHEAD = 80;
+    
+    /**
+     * Speed multiplier that will be used in the calculation of intercept velocity
+     */
+    public double SPEED_MULTIPLIER = 1;
+    
+    /**
+     * Constant that will be used it the calculation of intercept velocity
+     * that prioritizes asteroids directly in front of the ship
+     */
+    public double ANGLE_WEIGHT = 1;
 
     /**
      * Simply a reference to use some of the functions (i.e shortest distance, obstructions)
@@ -201,7 +212,7 @@ public class WorldState {
      * that ensures the ship moves to high mineable asteroid density regions of space
      * @return an <code>Asteroid</code> object that is most efficient to ship
      */
-    public Asteroid getMostEfficientMinableAsteroid(Map<UUID, AbstractObject> untouchables, Cluster c) {
+    public Asteroid getMostEfficientMinableAsteroid(Map<UUID, AbstractObject> untouchables) {
         double costEffectiveness = Double.NEGATIVE_INFINITY; // Most effective asteroid (higher is better)
         double dist; // Store distance to object
         double currentCostEffectiveness; // Store the cost effectiveness of current asteroid
@@ -214,15 +225,14 @@ public class WorldState {
         for (Asteroid asteroid : getMineableAsteroids()) {
         	UUID current = asteroid.getId();
         	//Checks if the current asteroid is in our target cluster set.
-        	if(untouchables.containsKey(current) || 
-        			!c.getAsteroids().contains(current)) { // Skip object
+        	if(untouchables.containsKey(current) ) { // Skip object
         		continue;
         	}
         	
             dist = _space.findShortestDistance(shipPos, asteroid.getPosition());
             toAsteroid = _space.findShortestDistanceVector(shipPos, asteroid.getPosition()); // Get vector pointing from ship to asteroid
             angleBetween = pathOfShip.angleBetween(toAsteroid); // Get angle between asteroid and ship velocity
-            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist); //*(1.0 + Math.pow(angleBetween, 2.0))); // Cost effectiveness calculation
+            currentCostEffectiveness = asteroid.getResources().getTotal() / (dist * (1.0 + Math.pow(angleBetween, ANGLE_WEIGHT))); // Cost effectiveness calculation
             if (currentCostEffectiveness > costEffectiveness) { // Check if asteroid closer to ship and clear of obstructions
                 costEffectiveness = currentCostEffectiveness; // Reassign shortest distance
                 candidate = asteroid;
@@ -441,7 +451,7 @@ public class WorldState {
             finalVelocity = finalVelocity.getUnitVector().multiply(MIN_VELOCITY_MAGNITUDE);
         }
 
-        return finalVelocity;
+        return finalVelocity.multiply(SPEED_MULTIPLIER);
     }
     
 

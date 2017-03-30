@@ -26,12 +26,19 @@ import dani6621.Utility;
 /**
  * Class is designed to relevant data to run simulated annealing.  In this particular version,
  * the simulated annealing seeks to find the optimal value for the minimum distance required from 
- * and old base to construct a new base.
+ * and old base to construct a new base.  Additionally, it seeks an optimal value for a speed
+ * multiplier on the ships velocity function, as well as a weight that, when increased, will 
+ * cause the ship to prioritze seeking asteroids that are directly in its current path. If a
+ * set of parameters produces a better final games score, this is considered a positive move.
+ * Hence, the game score is the evaluation function for the moves.
  * 
  * This class creates a new directory in the current working directory and a .txt file
- * that stores all simulations performed so far.  Within the .txt file, there are 4 possible
- * columns: the base_build_threshold, the temperature, the score of the simulation for that
- * particular threshold, and a tag (B) to indicate if the threshold is the current threshold.
+ * that stores all simulations performed so far.  Within the .txt file, there are 6 possible
+ * columns: the base_build_threshold, speed_multiplier, angle_weight, the temperature, the score 
+ * of the simulation for that for those particular parameters
+ * and a tag (B) to indicate if the threshold is the current threshold.
+ * 
+ * The file name is generation4.txt in the SimulatedAnnealing Directory
  * 
  * At the end of each simulation, a new distance threshold is created an appended (along
  * with the temperature of the next simulation) to the end of the .txt file so that the 
@@ -41,16 +48,22 @@ import dani6621.Utility;
  * 
  * If a threshold produces a better game score than the last best threshold, then this move
  * is accepted.  The next threshold value is determined by adding (or subtracting) a random number
- * between -80 and 80 to the last best threshold
+ * between -100 and 100 to the last best threshold.  The same rule applies to the angle_weight
+ * and the speed_multiplier, except that the random increment is between -0.5 and 0.5 for both.
  * 
  * The cooling schedule is calculated as follows
- * Temperature = Temperature * 0.95
+ * Temperature = Temperature * 0.975
  * 
  * Inferior moves are accepting if the following condition is met:
- * Random Number < exp((current Threshold - best Threshold) / temperature)
+ * Random Number < exp((current Threshold - best Threshold) / (10*temperature)).  The factor
+ * of 10 in the denominator was added during tuning so that the algorithm would take a sufficient
+ * number of inferior moves early in the simulation.  This allowed for a wider exploration of 
+ * the solution space.
  * 
- * The initial temperature was set at 1000.  This means a threshold that scores 1000 less than
- * the last best score will be accepted with ~36% probability
+ * The initial temperature was set at 1500. 
+ * 
+ * Defining the parameters
+ * 
  *
  */
 public class SABookKeeper {
@@ -68,7 +81,7 @@ public class SABookKeeper {
 	/**
 	 * The name delimiting each knowledge file
 	 */
-	private static final String KNOWLEDGE_FILE_BASE_NAME = "generation2";
+	private static final String KNOWLEDGE_FILE_BASE_NAME = "generation4";
 		
 	/**
 	 * Holds the path to file holding assigned generation
@@ -81,6 +94,16 @@ public class SABookKeeper {
 	public int base_build_threshold;
 	
 	/**
+	 * Threshold for the speed multiplier
+	 */
+	public double speed_multiplier;
+	
+	/**
+	 * Threshold for angle weight
+	 */
+	public double angle_weight_limit;
+	
+	/**
 	 * Temperature value for simulated annealing
 	 */
 	private double temperature;
@@ -91,9 +114,20 @@ public class SABookKeeper {
 	private int best_threshold;
 	
 	/**
+	 * Last accepted value for the speed multiplier
+	 */
+	private double best_speed;
+	
+	/**
+	 * Last accepted value for the ange_weight
+	 */
+	private double best_weight;
+	
+	/**
 	 * The score produced by the last accepted threshold
 	 */
 	private double best_score;
+	
 
 	
 	/**
@@ -102,6 +136,10 @@ public class SABookKeeper {
 	public SABookKeeper() {
 		assignedGeneration = "";
 		base_build_threshold = -1;
+		angle_weight_limit = 1;
+		speed_multiplier = 1;
+		best_speed = 1;
+		best_weight = 1;
 		temperature = 1500;
 		best_threshold = 0;
 		best_score = -1;
@@ -163,14 +201,19 @@ public class SABookKeeper {
 								
 				//Create initial round 0 dummy round
 				//B tag indicates best round so far for comparison
-				String gen0 = "0 0 -1 B\n";
+				String gen0 = "0 0 0 0 -1 B\n";
 				fileChannel.write(ByteBuffer.wrap(gen0.getBytes()));
 	
 				//Create intial random values
 				//Temperature always starts at 1000
-				int base_threshold = Utility.randomInteger(20, 1000);
+				int base_threshold = Utility.randomInteger(20, 600);
+				double speed = Utility.randomDouble(1,5);
+				double angle = Utility.randomDouble(1, 6);
+				
 				base_build_threshold = base_threshold;
-				String gen1 = base_threshold + " 1500.0";
+				speed_multiplier = speed;
+				angle_weight_limit = angle;				
+				String gen1 = base_threshold + " " + speed + " "+ angle +" 1500.0";
 				
 				fileChannel.write(ByteBuffer.wrap(gen1.getBytes()));
 				
@@ -190,6 +233,7 @@ public class SABookKeeper {
 		}
 	}
 	
+
 	/**
 	 * Private member method that will look at SimulatedAnnealing/generations.txt
 	 * and find the most recently accepted threshold value (as indicated by the lowest
@@ -223,9 +267,11 @@ public class SABookKeeper {
 
 				//Find best values.  These values will be overridden in there is a lower
 				//line with a B tag.
-				if(tokens.length>3){
+				if(tokens.length>5){
 					best_threshold = Integer.parseInt(tokens[0]);
-					best_score = Double.parseDouble(tokens[2]);
+					best_speed = Double.parseDouble(tokens[1]);
+					best_weight = Double.parseDouble(tokens[2]);
+					best_score = Double.parseDouble(tokens[4]);
 				}
 						
 				//null indicates the end of the file
@@ -237,7 +283,9 @@ public class SABookKeeper {
 					//A new round is created at the end of each evaluation
 					//call
 					base_build_threshold = Integer.parseInt(tokens[0]);
-					temperature = Double.parseDouble(tokens[1]);					
+					speed_multiplier = Double.parseDouble(tokens[1]);
+					angle_weight_limit = Double.parseDouble(tokens[2]);
+					temperature = Double.parseDouble(tokens[3]);					
 					sentinel = false; //breaks loop	
 				}
 				line = nextLine; //move to next line
@@ -258,7 +306,7 @@ public class SABookKeeper {
 	 * Method will assign a fitness to the current threshold and temperature
 	 * This is appended to the end of the file.  Also updates the temperature
 	 * via the cooling schedule, decides whether to "accept" the most recent 
-	 * threhold as the best, and generates a new threshold value for the next
+	 * threshold as the best, and generates a new threshold value for the next
 	 * iteration.
 	 * 
 	 * @param score	the score the agent received at the end of the game
@@ -277,6 +325,8 @@ public class SABookKeeper {
 				String add = " "+score+" B\n";
 				best_score = score;
 				best_threshold = base_build_threshold;
+				best_speed = speed_multiplier;
+				best_weight = angle_weight_limit;
 				
 				fileChannel.write(ByteBuffer.wrap(add.getBytes()));
 			}
@@ -284,8 +334,9 @@ public class SABookKeeper {
 			//If score isn't better, then we generate a new move with a probability
 			//determined by the temperature
 			else{
+				
 				double guess = Math.random();
-				double cutoff = Math.exp((score-best_score)/(2*temperature));
+				double cutoff = Math.exp((score-best_score)/(10*temperature));
 				//If Math.random (0-1) is LESS THAN our energy change, then we 
 				//make the move, otherwise, we keep our previous best.  Note that 
 				//as score-best_score increases, cutoff decreases, thus making moves
@@ -295,6 +346,9 @@ public class SABookKeeper {
 					String add = " "+score+" B\n";
 					best_score = score;	
 					best_threshold = base_build_threshold;
+					best_speed = speed_multiplier;
+					best_weight = angle_weight_limit;
+					
 					fileChannel.write(ByteBuffer.wrap(add.getBytes()));			
 				}
 				else{
@@ -313,9 +367,17 @@ public class SABookKeeper {
 			if(newThreshold<0){
 				newThreshold = 1;
 			}
-			temperature *= .95;
+			double newSpeed = best_speed + Utility.randomDouble(-.5, .5);
+			if(newSpeed<1){
+				newSpeed=1;
+			}
+			double newWeight = best_weight + Utility.randomDouble(-.5, .5);
+			if(newWeight<.1){
+				newWeight=1;
+			}
+			temperature *= .975;
 			
-			String nextGen = newThreshold + " " + temperature;
+			String nextGen = newThreshold + " " + newSpeed + " " + newWeight + " "+ temperature;
 			fileChannel.write(ByteBuffer.wrap(nextGen.getBytes()));			
 			outputStream.close();
 		}
@@ -326,12 +388,19 @@ public class SABookKeeper {
 		
 	
 	/**
-	 * getter method for the current threshold
+	 * getter method for the current threshold, speed muliplier, and angle weight
 	 * @return threshold
 	 */
 	public int getThreshold(){
 		return base_build_threshold;
 	}
 	
+	public double getSpeedMultiplier(){
+		return speed_multiplier;
+	}
+	
+	public double getAngleWeight(){
+		return angle_weight_limit;
+	}
 
 }
