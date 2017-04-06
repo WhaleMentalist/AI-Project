@@ -276,6 +276,10 @@ public class WorldState {
         double dist;
         Base candidate = null;
         Position shipPos = _referenceShip.getPosition();
+        Vector2D toBase; // Vector pointing to the energy source
+        Vector2D pathOfShip = shipPos.getTranslationalVelocity();; // Current velocity of ship
+        double angleBetween = WORST_ANGLE;
+        
         for (Base base : getTeamBases()) { // Go through team bases
         	
         	if(untouchables.containsKey(base.getId())) { // Skip object
@@ -283,6 +287,10 @@ public class WorldState {
         	}
         	
             dist = _space.findShortestDistance(shipPos, base.getPosition());
+            toBase = _space.findShortestDistanceVector(shipPos, base.getPosition());
+            angleBetween = Math.toDegrees(Math.abs(pathOfShip.angleBetween(toBase))); // Get angle between asteroid and ship velocity
+            dist += (angleBetween * ANGLE_WEIGHT);
+            
             if (dist < shortestDist) { // Check if the best candidate is beaten
                 shortestDist = dist;
                 candidate = base;
@@ -301,8 +309,16 @@ public class WorldState {
         double dist;
         Base candidate = null;
         Position shipPos = _referenceShip.getPosition();
+        Vector2D toBase; // Vector pointing to the energy source
+        Vector2D pathOfShip = shipPos.getTranslationalVelocity();; // Current velocity of ship
+        double angleBetween = WORST_ANGLE;
+        
         for (Base base : getTeamBases()) { // Go through team bases
             dist = _space.findShortestDistance(shipPos, base.getPosition());
+            toBase = _space.findShortestDistanceVector(shipPos, base.getPosition());
+            angleBetween = Math.toDegrees(Math.abs(pathOfShip.angleBetween(toBase))); // Get angle between asteroid and ship velocity
+            dist += (angleBetween * ANGLE_WEIGHT);
+            
             if (dist < shortestDist) { // Check if the best candidate is beaten
                 shortestDist = dist;
                 candidate = base;
@@ -349,6 +365,10 @@ public class WorldState {
         double dist;
         AbstractObject candidate = null; // The variable will hold beacon that was found
         Position shipPos = _referenceShip.getPosition();
+        Vector2D toEnergy; // Vector pointing to the energy source
+        Vector2D pathOfShip = shipPos.getTranslationalVelocity();; // Current velocity of ship
+        double angleBetween = WORST_ANGLE;
+        
         for (AbstractObject energySource : getEnergySources()) {
         	
         	if(untouchables.containsKey(energySource.getId())) { // Skip object
@@ -356,6 +376,9 @@ public class WorldState {
         	}
         	
             dist = _space.findShortestDistance(shipPos, energySource.getPosition());
+            toEnergy = _space.findShortestDistanceVector(shipPos, energySource.getPosition());
+            angleBetween = Math.toDegrees(Math.abs(pathOfShip.angleBetween(toEnergy))); // Get angle between asteroid and ship velocity
+            dist += (angleBetween * ANGLE_WEIGHT);
 
             if(energySource instanceof Base) { // Check if it is base
                 if(((Base) energySource).getEnergy() < SUFFICIENT_BASE_ENERGY) { // Check if bases has sufficient energy
@@ -384,9 +407,16 @@ public class WorldState {
         double dist;
         AbstractObject candidate = null; // The variable will hold beacon that was found
         Position shipPos = _referenceShip.getPosition();
+        Vector2D toEnergy; // Vector pointing to the energy source
+        Vector2D pathOfShip = shipPos.getTranslationalVelocity();; // Current velocity of ship
+        double angleBetween = WORST_ANGLE;
+        
         for (AbstractObject energySource : getEnergySources()) {
         	
             dist = _space.findShortestDistance(shipPos, energySource.getPosition());
+            toEnergy = _space.findShortestDistanceVector(shipPos, energySource.getPosition());
+            angleBetween = Math.toDegrees(Math.abs(pathOfShip.angleBetween(toEnergy))); // Get angle between asteroid and ship velocity
+            dist += (angleBetween * ANGLE_WEIGHT);
 
             if(energySource instanceof Base) { // Check if it is base
                 if(((Base) energySource).getEnergy() < SUFFICIENT_BASE_ENERGY) { // Check if bases has sufficient energy

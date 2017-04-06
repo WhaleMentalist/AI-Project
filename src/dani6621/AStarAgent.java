@@ -43,7 +43,7 @@ public class AStarAgent extends TeamClient {
 	/**
 	 * Toggle whether to activate agent in training mode or normal mode
 	 */
-	private static final boolean TRAINING_MODE = true;
+	private static final boolean TRAINING_MODE = false;
 	
 	/**
 	 * Error code for lack of chromosome assignment
@@ -146,7 +146,7 @@ public class AStarAgent extends TeamClient {
         
         if(knowledge.getCurrentEnergy() < knowledge.LOW_ENERGY) { // Get energy when low
             
-        	// Allow rendezvos behavior when ship has sufficient cargohold
+        	// Allow rendezvous behavior when ship has sufficient cargohold
         	if(ship.getResources().getTotal() > knowledge.RENDEZVOUS_CARGO_HOLD_CAPACITY && 
         			space.findShortestDistance(ship.getPosition(), knowledge.getClosestFriendlyBase().getPosition()) <
         						knowledge.MINIMAL_RENDEZVOUS_DISTANCE) { // Might be better off charging at base
@@ -346,7 +346,7 @@ public class AStarAgent extends TeamClient {
         	assignedIndividual = bookKeeper.getAssignedIndividual(); // Get the assigned individual
         	System.out.println(assignedIndividual.toString());
     	}
-    	else { // Use best candidate from training
+    	else { // Use best candidate from training... TODO: Replace with better one from generation 30...
     		System.out.println("Launching in non-training mode...");
     		assignedIndividual = new Individual(new AsteroidCollectorChromosome(2772, 4116, 
     				2.9380370693515476, 379.139308885403, 8492, 719.07326653848031));
