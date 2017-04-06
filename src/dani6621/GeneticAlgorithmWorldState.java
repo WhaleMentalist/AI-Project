@@ -16,7 +16,7 @@ import spacesettlers.utilities.Vector2D;
  * functions that retrieve other useful information such as closest asteroids 
  * and potential obstacles.
  */
-public class WorldState {
+public class GeneticAlgorithmWorldState {
 	
 	/**
 	 * The worst angle the ship would have to turn to perform action
@@ -95,7 +95,7 @@ public class WorldState {
      * @param ship  the ship belonging to agent
      * @param ind	the individual assigned to the ship
      */
-    public WorldState(Toroidal2DPhysics space, Ship ship, Individual ind) {
+    public GeneticAlgorithmWorldState(Toroidal2DPhysics space, Ship ship, Individual ind) {
         _space = space;
         _referenceShip = ship;
         individual = ind;

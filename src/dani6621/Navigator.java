@@ -97,7 +97,7 @@ public class Navigator {
 	 * @param ship the ship that is transversing the path
 	 * @return an action the ship will take to follow the path stored
 	 */
-	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, WorldState knowledge, Ship ship) {
+	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, GeneticAlgorithmWorldState knowledge, Ship ship) {
 		
 		// If ship is close enough to goal, then simply go straight to goal
 		if(goalObject != null && space.findShortestDistance(goalObject.getPosition(), 
@@ -141,7 +141,7 @@ public class Navigator {
 	 * @param goal the goal the ship needs to reach
 	 * @param obstacles the obstacles to avoid
 	 */
-	public void generateAStarPath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, 
+	public void generateAStarPath(Toroidal2DPhysics space, GeneticAlgorithmWorldState knowledge, AbstractObject ship, 
 			AbstractObject goal, Set<AbstractObject> obstacles) {
 		
 		currentTargetNode = null;
@@ -173,7 +173,7 @@ public class Navigator {
 	 * @param ship the ship that is transversing the path
 	 * @param goal the goal the ship needs to reach
 	 */
-	public void generateGreedyBFPath(Toroidal2DPhysics space, WorldState knowledge, AbstractObject ship, AbstractObject goal) {
+	public void generateGreedyBFPath(Toroidal2DPhysics space, GeneticAlgorithmWorldState knowledge, AbstractObject ship, AbstractObject goal) {
 		currentTargetNode = null;
 		map = new NavigationMap(space, knowledge, DEBUG_MODE); // Generate graph for problem
 		goalObject = goal;

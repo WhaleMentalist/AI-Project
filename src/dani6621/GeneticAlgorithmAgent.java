@@ -65,7 +65,7 @@ public class GeneticAlgorithmAgent extends TeamClient {
      * Represents how agent will perceive world state. You can
      * think of this as the percept of the agent.
      */
-    private WorldState knowledge;
+    private GeneticAlgorithmWorldState knowledge;
     
     /**
      * Holds the current objective of the agent as 
@@ -310,7 +310,7 @@ public class GeneticAlgorithmAgent extends TeamClient {
      * @param individual	the individual assigned to agent
      */
     private void perceive(Toroidal2DPhysics space, Ship ship, Individual individual) {
-        knowledge = new WorldState(space, ship, individual);
+        knowledge = new GeneticAlgorithmWorldState(space, ship, individual);
     }
     
     /**

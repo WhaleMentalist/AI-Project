@@ -178,7 +178,7 @@ public class NavigationMap {
 	 * 
 	 *@param debug	the flag for graphics display
 	 */
-	public NavigationMap(Toroidal2DPhysics space, WorldState knowledge, boolean debug) {
+	public NavigationMap(Toroidal2DPhysics space, GeneticAlgorithmWorldState knowledge, boolean debug) {
 		DEBUG_MODE = debug;
 		graphDrawing = new ArrayList<SpacewarGraphics>();
 		
