@@ -33,7 +33,7 @@ import spacesettlers.simulator.Toroidal2DPhysics;
  * will select the action the agent performs based on contents of
  * <code>WorldState</code> reference data member
  */
-public class AStarAgent extends TeamClient {
+public class GeneticAlgorithmAgent extends TeamClient {
 	
 	/**
 	 * Toggle value in order to see graphics on screen to help with debugging
