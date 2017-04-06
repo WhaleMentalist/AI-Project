@@ -97,7 +97,49 @@ public class Navigator {
 	 * @param ship the ship that is transversing the path
 	 * @return an action the ship will take to follow the path stored
 	 */
-	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, GeneticAlgorithmWorldState knowledge, Ship ship) {
+	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, GAWorldState knowledge, Ship ship) {
+		
+		// If ship is close enough to goal, then simply go straight to goal
+		if(goalObject != null && space.findShortestDistance(goalObject.getPosition(), 
+				ship.getPosition()) < NavigationMap.SPACING * 2.0 &&
+				path.size() < MINIMAL_PATH) {
+			return new MoveAction(space, ship.getPosition(), goalObject.getPosition(),
+					knowledge.calculateInterceptVelocity(goalObject));
+		}
+		
+		// Check if the current path is empty or no path formed at all
+		if(path != null && !(path.isEmpty())) {
+			
+			if(currentTargetNode == null) { // Assign a new node
+				currentTargetNode = path.pop();
+				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
+						knowledge.calculateVelocity(currentTargetNode.node.position));
+			}
+			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 4)) {
+				currentTargetNode = path.pop();
+				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
+						knowledge.calculateVelocity(currentTargetNode.node.position));
+			}
+			else {
+				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
+						knowledge.calculateVelocity(currentTargetNode.node.position));
+			}
+		}
+		else {
+			return new DoNothingAction(); // Can't do anything if search fails
+		}
+	}
+	
+	/**
+	 * Function will return a <code>AbstractAction</code> that allows the agent 
+	 * to follow the path. It will continue to 'pop' the stack until empty.
+	 * 
+	 * @param space the reference to game space used for utility functions
+	 * @param knowledge the reference to knowledge representation used for utility functions
+	 * @param ship the ship that is transversing the path
+	 * @return an action the ship will take to follow the path stored
+	 */
+	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, SAWorldState knowledge, Ship ship) {
 		
 		// If ship is close enough to goal, then simply go straight to goal
 		if(goalObject != null && space.findShortestDistance(goalObject.getPosition(), 
@@ -141,7 +183,40 @@ public class Navigator {
 	 * @param goal the goal the ship needs to reach
 	 * @param obstacles the obstacles to avoid
 	 */
-	public void generateAStarPath(Toroidal2DPhysics space, GeneticAlgorithmWorldState knowledge, AbstractObject ship, 
+	public void generateAStarPath(Toroidal2DPhysics space, GAWorldState knowledge, AbstractObject ship, 
+			AbstractObject goal, Set<AbstractObject> obstacles) {
+		
+		currentTargetNode = null;
+		map = new NavigationMap(space, knowledge, DEBUG_MODE); // Generate graph for problem
+		goalObject = goal;
+		
+		if(goalObject == null) {
+			throw new NavigationFailureException("Navigation failed! No object was specified!");
+		}
+		
+		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
+		
+		try {
+			path = graphSearch.aStarSearch(obstacles); // Generate a path
+		}
+		catch(GraphSearch.SearchFailureException e) {
+			path = new Stack<GraphSearchNode>();
+			throw new NavigationFailureException("Navigation failed! Search algorithm did not find path!");
+		}
+	}
+	
+	/**
+	 * Function will generate a path to the objective using a 
+	 * <code>GraphSearch</code> function that implements 'A*' search
+	 * algorithms.
+	 * 
+	 * @param space the reference to game space used for utility functions
+	 * @param knowledge the reference to knowledge representation used for utility functions
+	 * @param ship the ship that is transversing the path
+	 * @param goal the goal the ship needs to reach
+	 * @param obstacles the obstacles to avoid
+	 */
+	public void generateAStarPath(Toroidal2DPhysics space, SAWorldState knowledge, AbstractObject ship, 
 			AbstractObject goal, Set<AbstractObject> obstacles) {
 		
 		currentTargetNode = null;
@@ -173,7 +248,7 @@ public class Navigator {
 	 * @param ship the ship that is transversing the path
 	 * @param goal the goal the ship needs to reach
 	 */
-	public void generateGreedyBFPath(Toroidal2DPhysics space, GeneticAlgorithmWorldState knowledge, AbstractObject ship, AbstractObject goal) {
+	public void generateGreedyBFPath(Toroidal2DPhysics space, GAWorldState knowledge, AbstractObject ship, AbstractObject goal) {
 		currentTargetNode = null;
 		map = new NavigationMap(space, knowledge, DEBUG_MODE); // Generate graph for problem
 		goalObject = goal;

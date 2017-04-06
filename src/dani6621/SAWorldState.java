@@ -454,7 +454,6 @@ public class SAWorldState {
         return finalVelocity.multiply(SPEED_MULTIPLIER);
     }
     
-
     /**
      * Function that performs k-means clustering on mineable asteroids. It is assumed
      * that moving to regions with a higher density of mineable asteroids (in terms of
@@ -473,6 +472,7 @@ public class SAWorldState {
      * @return a cluster with the lowest dispersion (as measured by average distance of objects from the
      * centroid).
      */
+    /*
     public Cluster kmeansClustering(int kClusters){	 	
     	Random random = new Random();
     	Position currentPosition = _referenceShip.getPosition();
@@ -554,4 +554,5 @@ public class SAWorldState {
     		return null;
     	}  
     }
+    */
 }

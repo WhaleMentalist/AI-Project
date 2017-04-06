@@ -178,7 +178,57 @@ public class NavigationMap {
 	 * 
 	 *@param debug	the flag for graphics display
 	 */
-	public NavigationMap(Toroidal2DPhysics space, GeneticAlgorithmWorldState knowledge, boolean debug) {
+	public NavigationMap(Toroidal2DPhysics space, GAWorldState knowledge, boolean debug) {
+		DEBUG_MODE = debug;
+		graphDrawing = new ArrayList<SpacewarGraphics>();
+		
+		spaceRef = space;
+		// Get dimensions of environment
+		int height = spaceRef.getHeight();
+		int width = spaceRef.getWidth();
+		
+		// Calculate number of row points and column points
+		rowNodeNumber = width / SPACING;
+		columnNodeNumber = height / SPACING;
+		
+		// Get number of vertices in the graph
+		int numberOfVertices = rowNodeNumber * columnNodeNumber;
+		
+		// Initialize graph to hold correct number of vertices
+		dataPoints = new Graph<NavigationVertexKey, NavigationVertex>(numberOfVertices);
+		
+		Position nodePosition;
+		NavigationVertexKey key;
+		NavigationVertex vertex;
+		
+		// Enumerate through rows after columns
+		for(int i = 0; i < rowNodeNumber; ++i) {
+			// Go down along column first
+			for(int j = 0; j < columnNodeNumber; ++j) { // Populate graph with vertices
+				nodePosition = new Position((double) i * SPACING, (double) j * SPACING);
+				vertex = new NavigationVertex(nodePosition);
+				key = new NavigationVertexKey(i, j);
+				dataPoints.addVertex(key, vertex);
+				if(DEBUG_MODE)
+					graphDrawing.add(new StarGraphics(Color.RED, nodePosition));
+			}
+		}
+		
+		obstacles = new HashSet<AbstractObject>(); // Instantiate
+	}
+	
+	/**
+	 * Constructor will initialize and create graph
+	 * with proper edges and connections
+	 * 
+	 * @param space the space being abstracted by the 
+	 * 			graph
+	 * 
+	 * @param knowledge the knowledge representation
+	 * 
+	 *@param debug	the flag for graphics display
+	 */
+	public NavigationMap(Toroidal2DPhysics space, SAWorldState knowledge, boolean debug) {
 		DEBUG_MODE = debug;
 		graphDrawing = new ArrayList<SpacewarGraphics>();
 		

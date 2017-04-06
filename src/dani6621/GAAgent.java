@@ -33,7 +33,7 @@ import spacesettlers.simulator.Toroidal2DPhysics;
  * will select the action the agent performs based on contents of
  * <code>WorldState</code> reference data member
  */
-public class GeneticAlgorithmAgent extends TeamClient {
+public class GAAgent extends TeamClient {
 	
 	/**
 	 * Toggle value in order to see graphics on screen to help with debugging
@@ -65,7 +65,7 @@ public class GeneticAlgorithmAgent extends TeamClient {
      * Represents how agent will perceive world state. You can
      * think of this as the percept of the agent.
      */
-    private GeneticAlgorithmWorldState knowledge;
+    private GAWorldState knowledge;
     
     /**
      * Holds the current objective of the agent as 
@@ -310,7 +310,7 @@ public class GeneticAlgorithmAgent extends TeamClient {
      * @param individual	the individual assigned to agent
      */
     private void perceive(Toroidal2DPhysics space, Ship ship, Individual individual) {
-        knowledge = new GeneticAlgorithmWorldState(space, ship, individual);
+        knowledge = new GAWorldState(space, ship, individual);
     }
     
     /**

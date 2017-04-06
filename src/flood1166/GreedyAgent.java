@@ -48,7 +48,7 @@ public class GreedyAgent extends TeamClient {
      * Represents how agent will perceive world state. You can
      * think of this as the percept of the agent.
      */
-    private GeneticAlgorithmWorldState knowledge;
+    private GAWorldState knowledge;
     
     /**
      * Holds the current objective of the agent as 
