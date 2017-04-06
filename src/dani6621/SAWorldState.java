@@ -16,7 +16,7 @@ import spacesettlers.utilities.Vector2D;
  * functions that retrieve other useful information such as closest asteroids 
  * and potential obstacles.
  */
-public class WorldState {
+public class SAWorldState {
 
     /**
      * Constant helps identify a low energy threshold
@@ -79,7 +79,7 @@ public class WorldState {
      * @param space a reference to simulation containing objects
      * @param ship  the ship belonging to agent
      */
-    public WorldState(Toroidal2DPhysics space, Ship ship) {
+    public SAWorldState(Toroidal2DPhysics space, Ship ship) {
         _space = space;
         _referenceShip = ship;
     }

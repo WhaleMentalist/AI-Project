@@ -171,8 +171,6 @@ public class SABookKeeper {
 		
 		String filePath = ""; // Path to file
 		String fileName = ""; // Name of the file
-		int generationNumber = -1; // Hold current generation number, if found, for comparison
-		
 		for(File file : files) {
 			filePath = file.getAbsolutePath(); // Get path of 'file'
 			fileName = file.getName(); // Name of 'file'

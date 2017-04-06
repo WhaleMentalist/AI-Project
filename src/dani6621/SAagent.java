@@ -28,7 +28,7 @@ import spacesettlers.simulator.Toroidal2DPhysics;
  * will select the action the agent performs based on contents of
  * <code>WorldState</code> reference data member
  */
-public class AStarAgent extends TeamClient {
+public class SAagent extends TeamClient {
 	
 	/**
 	 * Error code for lack of chromosome assignment
@@ -85,7 +85,7 @@ public class AStarAgent extends TeamClient {
      * Represents how agent will perceive world state. You can
      * think of this as the percept of the agent.
      */
-    private WorldState knowledge;
+    private SAWorldState knowledge;
     
     /**
      * Holds the current objective of the agent as 
@@ -160,7 +160,7 @@ public class AStarAgent extends TeamClient {
         	}
         }*/
         
-        if(knowledge.getCurrentEnergy() < WorldState.LOW_ENERGY) { // Get energy when low
+        if(knowledge.getCurrentEnergy() < SAWorldState.LOW_ENERGY) { // Get energy when low
             AbstractObject source = knowledge.getClosestEnergySource(unapproachableObject);
 
             if(source == null) { // Didn't find a source
@@ -200,7 +200,7 @@ public class AStarAgent extends TeamClient {
             	}
             }
         }
-        else if(ship.getResources().getTotal() > WorldState.FULL_CARGO) { // Detect full cargo
+        else if(ship.getResources().getTotal() > SAWorldState.FULL_CARGO) { // Detect full cargo
             Base closestBase = knowledge.getClosestFriendlyBase(unapproachableObject);
             
             if(closestBase != null) { // Goto base that was found
@@ -288,7 +288,7 @@ public class AStarAgent extends TeamClient {
      * @param space the object that contains environment agent will perceive
      */
     private void perceive(Toroidal2DPhysics space, Ship ship) {
-        knowledge = new WorldState(space, ship);
+        knowledge = new SAWorldState(space, ship);
         knowledge.SPEED_MULTIPLIER = speed_multiplier;
         knowledge.ANGLE_WEIGHT = angle_weight;
     }

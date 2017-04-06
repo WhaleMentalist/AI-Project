@@ -140,7 +140,7 @@ public class NavigationMap {
 	 * Reference to knowledge representation to help 
 	 * graph construct accurate map
 	 */
-	private WorldState knowledgeRef;
+	private SAWorldState knowledgeRef;
 	
 	/**
 	 * Number of nodes in each row
@@ -161,7 +161,7 @@ public class NavigationMap {
 	 * 
 	 * @param knowledge the knowledge representation
 	 */
-	public NavigationMap(Toroidal2DPhysics space, WorldState knowledge) {
+	public NavigationMap(Toroidal2DPhysics space, SAWorldState knowledge) {
 		
 		spaceRef = space;
 		knowledgeRef = knowledge;
