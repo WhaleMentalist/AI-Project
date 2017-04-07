@@ -1,11 +1,15 @@
 package dani6621;
 
+import java.awt.Color;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import dani6621.GraphSearch.GraphSearchNode;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
 import spacesettlers.actions.MoveAction;
@@ -14,6 +18,7 @@ import spacesettlers.actions.PurchaseTypes;
 import spacesettlers.clients.ImmutableTeamInfo;
 import spacesettlers.clients.TeamClient;
 import spacesettlers.graphics.SpacewarGraphics;
+import spacesettlers.graphics.StarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
@@ -28,12 +33,15 @@ import spacesettlers.simulator.Toroidal2DPhysics;
  * will select the action the agent performs based on contents of
  * <code>WorldState</code> reference data member
  */
-public class SAagent extends TeamClient {
+public class SAAgent extends TeamClient {
 	
 	/**
-	 * Error code for lack of chromosome assignment
+	 * For easier debugging using graphical reperesentation of nodes and 
+	 * path finding
 	 */
-	private static final int CHROMOSOME_ASSIGNMENT_FAILURE = 1;
+	private static final boolean DEBUG_MODE = false;
+	
+	private static final boolean TRAINING_MODE = false;
 	
 	/**
 	 * Number of retries at forming contingency plan
@@ -114,6 +122,11 @@ public class SAagent extends TeamClient {
      * 			list of objects.
      */
     private Map<UUID, AbstractObject> unapproachableObject;
+    
+    /**
+     * Debug navigation
+     */
+    private List<SpacewarGraphics> graphicsToAdd;
 
     /**
      * Assigns ships to asteroids and beacons, as described above
@@ -145,6 +158,13 @@ public class SAagent extends TeamClient {
     public AbstractAction getReflexAgentAction(Toroidal2DPhysics space, Ship ship) {
         AbstractAction newAction = new DoNothingAction();
         perceive(space, ship);
+        
+     // Draw A* Path with debug (Got dead code warning, but it's intended)
+        if(DEBUG_MODE && navigator.getCopyPath() != null) {
+        	for(GraphSearchNode node : navigator.getCopyPath()) {
+            	graphicsToAdd.add(new StarGraphics(2, Color.YELLOW, node.node.position));
+            }
+        }
         
         /*  - Code for K-Means Clustering
         if(space.getCurrentTimestep()%CLUSTER_TIMESTEPS == 0){   	
@@ -309,18 +329,30 @@ public class SAagent extends TeamClient {
     public void initialize(Toroidal2DPhysics space) {
     	
     	// Create navigation and track list of objects that could not be approached
-    	navigator = new Navigator();
+    	navigator = new Navigator(DEBUG_MODE);
     	unapproachableObject = new HashMap<UUID, AbstractObject>();
+    	graphicsToAdd = new ArrayList<SpacewarGraphics>();
     	
-    	// Simulated annealing bookkeper
-    	bookKeeper = new SABookKeeper(); // Call initialize function which reads file
-    	minimum_base_purchase_distance = bookKeeper.getThreshold();
-    	speed_multiplier = bookKeeper.getSpeedMultiplier();
-    	angle_weight = bookKeeper.getAngleWeight();
-    	
-    	System.out.println("Distance Threshold is: " + minimum_base_purchase_distance);
-    	System.out.println("Speed Multiplier is: " +speed_multiplier);
-    	System.out.println("Angle Weight is: " + angle_weight);
+    	if(TRAINING_MODE) {
+	    	// Simulated annealing bookkeper
+	    	bookKeeper = new SABookKeeper(); // Call initialize function which reads file
+	    	minimum_base_purchase_distance = bookKeeper.getThreshold();
+	    	speed_multiplier = bookKeeper.getSpeedMultiplier();
+	    	angle_weight = bookKeeper.getAngleWeight();
+	    	
+	    	System.out.println("Distance Threshold is: " + minimum_base_purchase_distance);
+	    	System.out.println("Speed Multiplier is: " +speed_multiplier);
+	    	System.out.println("Angle Weight is: " + angle_weight);
+    	}
+    	else {
+    		minimum_base_purchase_distance = 517.0;
+    		speed_multiplier = 1.513;
+    		angle_weight = 3.367;
+    		System.out.println("Non-training mode...");
+    		System.out.println("Distance Threshold is: " + minimum_base_purchase_distance);
+	    	System.out.println("Speed Multiplier is: " +speed_multiplier);
+	    	System.out.println("Angle Weight is: " + angle_weight);
+    	}
     	
     	
     }
@@ -332,18 +364,18 @@ public class SAagent extends TeamClient {
 
     @Override
     public void shutDown(Toroidal2DPhysics space) {
-    	
-    	double totalScore = 0;
-    	
-    	for(ImmutableTeamInfo info : space.getTeamInfo()) {
-    		if(info.getTeamName().equals("Padawan Daniel and Flood")) {
-    			totalScore = info.getScore();
-    		}
+    	if(TRAINING_MODE) {
+    		double totalScore = 0;
+        	
+        	for(ImmutableTeamInfo info : space.getTeamInfo()) {
+        		if(info.getTeamName().equals("Padawan Daniel and Flood")) {
+        			totalScore = info.getScore();
+        		}
+        	}
+        	
+        	//Update the simulated annealing file
+        	bookKeeper.assignFitness(totalScore);
     	}
-    	
-    	//Update the simulated annealing file
-    	bookKeeper.assignFitness(totalScore);
-    	
     }
 
     /**
@@ -352,6 +384,15 @@ public class SAagent extends TeamClient {
     @Override
     public Set<SpacewarGraphics> getGraphics() {
     	HashSet<SpacewarGraphics> graphics = new HashSet<SpacewarGraphics>();
+    	
+    	if(DEBUG_MODE) {
+    		graphics.addAll(graphicsToAdd);
+    		if(navigator.map.graphDrawing != null) {
+    			graphics.addAll(navigator.map.graphDrawing);
+    		}
+    		graphicsToAdd.clear();
+    	}
+    		
 		return graphics;
     }
 
