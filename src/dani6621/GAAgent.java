@@ -348,8 +348,8 @@ public class GAAgent extends TeamClient {
     	}
     	else { // Use best candidate from training... TODO: Replace with better one from generation 30...
     		System.out.println("Launching in non-training mode...");
-    		assignedIndividual = new Individual(new AsteroidCollectorChromosome(2772, 4116, 
-    				2.9380370693515476, 379.139308885403, 8492, 719.07326653848031));
+    		assignedIndividual = new Individual(new AsteroidCollectorChromosome(2593, 1679, 
+    				3.4550799313562233, 439.3806999297394, 982, 788.4360451847539));
     	}
     	
     }
