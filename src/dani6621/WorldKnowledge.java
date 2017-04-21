@@ -257,7 +257,7 @@ public class WorldKnowledge {
         return candidate;
     }
     
-    // TODO: Change way ship navigates using functions below!!! Need to experiment with controls...
+    // TODO: Change way ship navigates using functions below!!! Need to experiment with controls... Definately look into overdamp vs underdamp
     
     /**
      * Function helps ship to intercept object in space for faster retrieval.
