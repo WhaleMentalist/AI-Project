@@ -2,10 +2,12 @@ package dani6621;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
 import spacesettlers.objects.Base;
+import spacesettlers.objects.Beacon;
 import spacesettlers.objects.Flag;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
@@ -23,20 +25,49 @@ import spacesettlers.utilities.Vector2D;
 public class WorldKnowledge {
 	
 	/**
+	 * Used to help gather team ships
+	 */
+	public static final String TEAM_NAME = "Padawan_Daniel_and_Flood";
+	
+	/**
 	 * Used as threshold for ship considering base as energy source
 	 */
-	private static final double SUFFICIENT_ENERGY = 1000;
+	public static final double SUFFICIENT_ENERGY = 1000;
+	
+	/**
+	 * Threshold for resource capacity
+	 */
+	public static final int RESOURCE_THRESHOLD = 1000;
+	
+	/**
+	 * Threshold for refuel
+	 */
+	public static final double ENERGY_THRESHOLD = Ship.SHIP_MAX_ENERGY / 2.0;
 	
     /**
      * If a maximum velocity is imposed the agent has better
      * control
      */
-    public static final double MAX_VELOCITY_MAGNITUDE = 60.0;
+	public static final double MAX_VELOCITY_MAGNITUDE = 60.0;
 
     /**
      * Helps to avoid agent from chasing asteroid at a slow speed
      */
-    public static final double MIN_VELOCITY_MAGNITUDE = 35.0;
+	public static final double MIN_VELOCITY_MAGNITUDE = 35.0;
+    
+    /**
+     * Contains information on team members' actions
+     */
+    private TeamKnowledge teamKnowledge;
+    
+    /**
+     * Basic constructor
+     * 
+     * @param teamInfo	the information about the team
+     */
+    public WorldKnowledge(TeamKnowledge teamInfo) {
+    	teamKnowledge = teamInfo;
+    }
 	
 	/**
 	 * Function retrieves all mineable asteroids in the space currently
@@ -150,6 +181,22 @@ public class WorldKnowledge {
 	}
 	
 	/**
+	 * Function will retrieve all ships on team
+	 * 
+	 * @param space	a reference to space
+	 * @return	a <code>Set</code> of all team ships in game
+	 */
+	public static Set<Ship> getTeamShips(Toroidal2DPhysics space) {
+		Set<Ship> ships = new HashSet<Ship>();
+		for(Ship ship : space.getShips()) {
+			if(ship.getTeamName().equals(TEAM_NAME)) {
+				ships.add(ship);
+			}
+		}
+		return ships;
+	}
+	
+	/**
 	 * Function retrieves all obstacles in space
 	 * 
 	 * @param space	a reference to space
@@ -158,9 +205,9 @@ public class WorldKnowledge {
 	 */
 	public static Set<AbstractObject> getAllObstacles(Toroidal2DPhysics space, Ship ship) {
 		Set<AbstractObject> obstacles = new HashSet<AbstractObject>();
-		obstacles.addAll(WorldKnowledge.getUnmineableAsteroids(space));
-		obstacles.addAll(WorldKnowledge.getBases(space));
-		obstacles.addAll(WorldKnowledge.getShips(space, ship));
+		obstacles.addAll(getUnmineableAsteroids(space));
+		obstacles.addAll(getBases(space));
+		obstacles.addAll(getShips(space, ship));
 		return obstacles;
 	}
 	
@@ -173,9 +220,9 @@ public class WorldKnowledge {
 	 */
 	public static Set<AbstractObject> getAllObstaclesExceptTeamBases(Toroidal2DPhysics space, Ship ship) {
 		Set<AbstractObject> obstacles = new HashSet<AbstractObject>();
-		obstacles.addAll(WorldKnowledge.getUnmineableAsteroids(space));
-		obstacles.addAll(WorldKnowledge.getNonTeamBases(space, ship));
-		obstacles.addAll(WorldKnowledge.getShips(space, ship));
+		obstacles.addAll(getUnmineableAsteroids(space));
+		obstacles.addAll(getNonTeamBases(space, ship));
+		obstacles.addAll(getShips(space, ship));
 		return obstacles;
 	}
 	
@@ -184,19 +231,21 @@ public class WorldKnowledge {
 	 * 
 	 * @param space	a reference to space
 	 * @param ship	the ship that will be used as reference
+	 * @oaran failedAsteroids	track the asteroids that had a failed search attempt
 	 * @return	a <code>Asteroid</code> closest to ship
 	 */
-	public static Asteroid getClosestAsteroid(Toroidal2DPhysics space, Ship ship) {
+	public Asteroid getClosestAsteroid(Toroidal2DPhysics space, Ship ship, Set<UUID> failedAsteroids) {
 		double shortestDist = Double.MAX_VALUE;
 		double dist = 0.0; // Store temporary distance
 		Position shipPos = ship.getPosition();
 		Asteroid candidate = null;
 		
-		for(Asteroid asteroid : WorldKnowledge.getMineableAsteroids(space)) {
+		for(Asteroid asteroid : getMineableAsteroids(space)) {
 			dist = space.findShortestDistance(asteroid.getPosition(), shipPos);
-			if(dist < shortestDist) {
+			if(dist < shortestDist && !(teamKnowledge.isAsteroidAssigned(asteroid)) && !(failedAsteroids.contains(asteroid.getId()))) {
 				shortestDist = dist;
 				candidate = asteroid;
+				teamKnowledge.assignAsteroidToShip(ship, asteroid);
 			}
 		}
 		return candidate;
@@ -209,12 +258,12 @@ public class WorldKnowledge {
      * @param ship	the ship used as reference
      * @return  <code>Base</code> object closest to ship
      */
-    public static Base getClosestFriendlyBase(Toroidal2DPhysics space, Ship ship) {
+    public Base getClosestFriendlyBase(Toroidal2DPhysics space, Ship ship) {
         double shortestDist = Double.POSITIVE_INFINITY;
         double dist;
         Base candidate = null;
         Position shipPos = ship.getPosition();
-        for (Base base : WorldKnowledge.getTeamBases(space, ship)) { // Go through team bases
+        for (Base base : getTeamBases(space, ship)) { // Go through team bases
             dist = space.findShortestDistance(shipPos, base.getPosition());
             if (dist < shortestDist) { // Check if the best candidate is beaten
                 shortestDist = dist;
@@ -231,27 +280,44 @@ public class WorldKnowledge {
      * 
      * @param space	a reference to space
      * @param ship	the ship used as reference
+     * @param failedSources	the objects that could not have path formed
      * @return <code>AbstractObject</code> object that is closest to ship
      */
-    public static AbstractObject getClosestEnergySource(Toroidal2DPhysics space, Ship ship) {
+    public AbstractObject getClosestEnergySource(Toroidal2DPhysics space, Ship ship, Set<UUID> failedSources) {
         double shortestDist = Double.POSITIVE_INFINITY;
         double dist;
         AbstractObject candidate = null; // The variable will hold beacon that was found
         Position shipPos = ship.getPosition();
         for (AbstractObject energySource : getEnergySources(space, ship)) {
         	
-            dist = space.findShortestDistance(shipPos, energySource.getPosition());
+        	if(failedSources.contains(energySource.getId())) // Skip objects that are unapproachable
+        		continue;
 
             if(energySource instanceof Base) { // Check if it is base
                 if(((Base) energySource).getEnergy() < SUFFICIENT_ENERGY) { // Check if base has sufficient energy
                     continue; // Skip if base is too low on energy
                 }
             }
+            
+            dist = space.findShortestDistance(shipPos, energySource.getPosition());
 
             // Otherwise see if it is closer
             if (dist < shortestDist) {
-                shortestDist = dist; // Reassign shortest distance
-                candidate = energySource;
+                // Now check what the energy source is...
+                if(energySource instanceof Base)
+                {
+                	// TODO: Add 'isAssign' check here as well
+                	shortestDist = dist; // Reassign shortest distance
+                    candidate = energySource;
+                	teamKnowledge.assignBaseToShip(ship, (Base) energySource); 
+                }
+                else {
+                	if(!(teamKnowledge.isEnergyAssigned(ship, (Beacon) energySource))) {
+                		shortestDist = dist; // Reassign shortest distance
+                        candidate = energySource;
+                    	teamKnowledge.assignEnergyToShip(ship, (Beacon) energySource);
+                	}
+                }
             }
         }
         return candidate;
@@ -344,7 +410,7 @@ public class WorldKnowledge {
      * @return a <code>Set</code> containing all energy source
      *          objects
      */
-    private static Set<AbstractObject> getEnergySources(Toroidal2DPhysics space, Ship ship) {
+    private Set<AbstractObject> getEnergySources(Toroidal2DPhysics space, Ship ship) {
         Set<AbstractObject> energySources = new HashSet<AbstractObject>();
         energySources.addAll(getTeamBases(space, ship)); // All team bases are decent energy source
         energySources.addAll(space.getBeacons()); // Beacons are also energy sources
