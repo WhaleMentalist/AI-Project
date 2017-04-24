@@ -43,11 +43,6 @@ public class TeamKnowledge {
 	private HashMap<UUID, Ship> baseToShip;
 	
 	/**
-	 * Data structure will track what flags are assigned
-	 */
-	private HashMap<UUID, Ship> flagToShip; 
-	
-	/**
 	 * Data structure will track what beacons are assigned
 	 */
 	private HashMap<UUID, Ship> energyToShip;
@@ -58,14 +53,19 @@ public class TeamKnowledge {
 	private HashMap<UUID, Navigator> shipToNavigator;
 	
 	/**
+	 * Holds the designated flag carrier for the team
+	 */
+	private UUID flagCarrier;
+	
+	/**
 	 * Initialization constructor
 	 */
 	public TeamKnowledge() {
 		asteroidToShip = new HashMap<UUID, Ship>();
 		baseToShip = new HashMap<UUID, Ship>();
-		flagToShip = new HashMap<UUID, Ship>();
 		energyToShip = new HashMap<UUID, Ship>();
 		shipToNavigator = new HashMap<UUID, Navigator>();
+		flagCarrier = null;
 	}
 	
 	/**
@@ -107,15 +107,24 @@ public class TeamKnowledge {
 	public void assignBaseToShip(Ship ship, Base base) {
 		baseToShip.put(base.getId(), ship);
 	}
-
+	
 	/**
-	 * Assigns flag to a ship
-	 * 	
-	 * @param ship	the ship to be assigned
-	 * @param flag	the flag that will be assigned
+	 * Function will find suitable flag carrier based on current
+	 * state of world and each ship
+	 * 
+	 * @return
 	 */
-	public void assignFlagToShip(Ship ship, Flag flag) {
-		flagToShip.put(flag.getId(), ship);
+	public void assignFlagCarrier(Ship ship) {
+		flagCarrier = ship.getId();
+	}
+	
+	/**
+	 * Function returns UUID of flag carrier
+	 * 
+	 * @return	a <code>UUID</code> representing flag carrier
+	 */
+	public UUID getFlagCarrierUUID() {
+		return flagCarrier;
 	}
 	
 	/**
@@ -214,7 +223,8 @@ public class TeamKnowledge {
 		for (UUID asteroidId : asteroidToShip.keySet()) {
 			asteroid = (Asteroid) space.getObjectById(asteroidId);
 			ship = (Ship) space.getObjectById(asteroidToShip.get(asteroid.getId()).getId());
-			if (asteroid == null || !(asteroid.isAlive()) || asteroid.isMoveable() || ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) {
+			if (asteroid == null || !(asteroid.isAlive()) || asteroid.isMoveable() || ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD ||
+					!(asteroidId.equals(shipToNavigator.get(ship.getId()).getGoalObjectUUID()))) {
  				finishedAsteroids.add(asteroid);
 			}
 		}
@@ -243,25 +253,14 @@ public class TeamKnowledge {
 			if(ship == null || !(ship.isAlive()) || ship.getResources().getTotal() == 0 && 
 					ship.getEnergy() > HIT_BASE_ENERGY && !(ship.isCarryingFlag())) {
 				finishedBase.add(base); // Ship managed to get to base
+				
+				if(ship.getId().equals(flagCarrier)) // Flag carrier hit base so unassign flag carrier
+					flagCarrier = null;
 			}
 		}
 		
 		for (Base baseElement : finishedBase) { // Delete base from map
 			baseToShip.remove(baseElement.getId());
-		}
-	}
-	
-	/**
-	 * Function updates and cleans flag assignments. It will check if action
-	 * is valid (i.e does object still exist)
-	 * 
-	 * @param space	the reference to the space
-	 */
-	private void updateFlagToShip(Toroidal2DPhysics space) {
-		for(UUID id : flagToShip.keySet()) {
-			if(space.getObjectById(id) == null || !(space.getObjectById(id).isAlive())) { // Object no longer in game
-				flagToShip.remove(id); // Remove it from map
-			}
 		}
 	}
 	
@@ -279,7 +278,8 @@ public class TeamKnowledge {
 		for (UUID beaconID : energyToShip.keySet()) {
 			beacon = (Beacon) space.getObjectById(beaconID);
 			ship = (Ship) space.getObjectById(energyToShip.get(beaconID).getId());
-			if (beacon == null || !(beacon.isAlive()) || ship.getEnergy() > WorldKnowledge.ENERGY_THRESHOLD || !(ship.isAlive())) {
+			if (beacon == null || !(beacon.isAlive()) || ship.getEnergy() > WorldKnowledge.ENERGY_THRESHOLD || !(ship.isAlive())
+					|| !(beaconID.equals(shipToNavigator.get(ship.getId()).getGoalObjectUUID()))) {
 				finishedEnergy.add(beacon);
 			}
 		}

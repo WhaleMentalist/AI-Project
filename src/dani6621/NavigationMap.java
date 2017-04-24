@@ -129,7 +129,7 @@ public class NavigationMap {
 	/**
 	 * Determines if vertex is close to obstacle
 	 */
-	private static final int CLOSE_DISTANCE = (int) (Ship.SHIP_RADIUS * 2.5);
+	public static final int CLOSE_DISTANCE = (int) (Ship.SHIP_RADIUS * 2.5);
 	
 	/**
 	 * Set value for graphcis debugging

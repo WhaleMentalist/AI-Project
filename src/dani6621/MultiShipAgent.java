@@ -17,6 +17,7 @@ import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
 import spacesettlers.objects.Base;
+import spacesettlers.objects.Flag;
 import spacesettlers.objects.Ship;
 import spacesettlers.objects.powerups.SpaceSettlersPowerupEnum;
 import spacesettlers.objects.resources.ResourcePile;
@@ -34,7 +35,7 @@ public class MultiShipAgent extends TeamClient {
 	/**
 	 * Amount of time that must elapse before agent can replan
 	 */
-	private static final int REPLAN_TIME_STEP = 10;
+	private static final int REPLAN_TIME_STEP = 50;
 	
 	/**
 	 * Number of new plans that can form if search fails for navigation
@@ -127,23 +128,51 @@ public class MultiShipAgent extends TeamClient {
         AbstractAction newAction = new DoNothingAction();
         WorldKnowledge knowledge = new WorldKnowledge(teamKnowledge);
         
-        // Asteroid Gathering Component
-        if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Low Energy State
-        	retrieveEnergy(space, ship, knowledge);
-            newAction = teamKnowledge.getTeamMemberAction(space, ship);
+        if(teamKnowledge.getFlagCarrierUUID() == null) { // Need to assign flag carrier
+        	Ship flagCarrier = WorldKnowledge.getFlagCarrier(space, ship);
+        	if(flagCarrier != null) {
+        		teamKnowledge.assignFlagCarrier(flagCarrier);
+        	}
         }
-        else if(ship.getResources().getTotal() > WorldKnowledge.RESOURCE_THRESHOLD) { // High Cargohold State
-        	returnResources(space, ship, knowledge);
-        	newAction = teamKnowledge.getTeamMemberAction(space, ship);
-        }
-        else { // Asteroid Gathering State
-        	asteroidMine(space, ship, knowledge);
-        	newAction = teamKnowledge.getTeamMemberAction(space, ship);
-        	
-        	if(newAction instanceof DoNothingAction) { // Algorithm couldn't find a suitable asteroid
-        		retrieveEnergy(space, ship, knowledge); // Let's just get some energy to help
+        
+        if(ship.getId().equals(teamKnowledge.getFlagCarrierUUID())) {
+        	if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Low Energy State
+            	retrieveEnergy(space, ship, knowledge);
+                newAction = teamKnowledge.getTeamMemberAction(space, ship);
+            }
+        	else if(!(ship.isCarryingFlag())) { // Retrieving Flag State
+        		retrieveFlag(space, ship, knowledge);
+        		newAction = teamKnowledge.getTeamMemberAction(space, ship);
+        		
+        		if(newAction instanceof DoNothingAction) { // Algorithm couldn't find a suitable flag
+            		retrieveEnergy(space, ship, knowledge); // Let's just get some energy to help
+            		newAction = teamKnowledge.getTeamMemberAction(space, ship);
+            	}
+        	}
+        	else {
+        		returnResources(space, ship, knowledge);
         		newAction = teamKnowledge.getTeamMemberAction(space, ship);
         	}
+        }
+        else {
+        	// Asteroid Gathering Component
+            if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Low Energy State
+            	retrieveEnergy(space, ship, knowledge);
+                newAction = teamKnowledge.getTeamMemberAction(space, ship);
+            }
+            else if(ship.getResources().getTotal() > WorldKnowledge.RESOURCE_THRESHOLD) { // High Cargohold State
+            	returnResources(space, ship, knowledge);
+            	newAction = teamKnowledge.getTeamMemberAction(space, ship);
+            }
+            else { // Asteroid Gathering State
+            	asteroidMine(space, ship, knowledge);
+            	newAction = teamKnowledge.getTeamMemberAction(space, ship);
+            	
+            	if(newAction instanceof DoNothingAction) { // Algorithm couldn't find a suitable asteroid
+            		retrieveEnergy(space, ship, knowledge); // Let's just get some energy to help
+            		newAction = teamKnowledge.getTeamMemberAction(space, ship);
+            	}
+            }
         }
         
         return newAction;
@@ -216,6 +245,27 @@ public class MultiShipAgent extends TeamClient {
         		}
         	}
         }
+    }
+    
+    /**
+     * 
+     * @param space
+     * @param ship
+     * @param knowledge
+     */
+    private void retrieveFlag(Toroidal2DPhysics space, Ship ship, WorldKnowledge knowledge) {
+    	Flag closestFlag = WorldKnowledge.getOtherTeamFlag(space, ship);
+    	
+    	if(closestFlag != null) {
+    		if(space.getCurrentTimestep() % REPLAN_TIME_STEP == 0) {
+    				try {
+    					teamKnowledge.generateTeamMemberPath(space, ship, closestFlag, WorldKnowledge.getAllObstacles(space, ship));
+    				}
+    				catch(NavigationFailureException e) {
+
+    				}
+    		}
+    	}
     }
     
     /**

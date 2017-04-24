@@ -38,11 +38,16 @@ public class WorldKnowledge {
 	 * Threshold for resource capacity
 	 */
 	public static final int RESOURCE_THRESHOLD = 1000;
-	
+
 	/**
 	 * Threshold for refuel
 	 */
 	public static final double ENERGY_THRESHOLD = Ship.SHIP_MAX_ENERGY / 2.0;
+	
+	/**
+	 * Threshold that marks a healthy ship
+	 */
+	public static final double HEALTHY_ENERGY = Ship.SHIP_MAX_ENERGY * 0.75;
 	
     /**
      * If a maximum velocity is imposed the agent has better
@@ -86,19 +91,34 @@ public class WorldKnowledge {
 	}
 	
 	/**
-	 * Function retrieves all flags in the space currently
+	 * Function retrieves other team flag
+	 * 
+	 * @param space	a reference to space
+	 * @return	a <code>Flag</code> object belonging to other team
+	 * 			NOTE: It can return <code>null</code>
+	 */
+	public static Flag getOtherTeamFlag(Toroidal2DPhysics space, Ship ship) {
+		Flag otherTeamFlag = null;
+		for(Flag flag : space.getFlags()) {
+			if(!(flag.getTeamName().equals(ship.getTeamName()))) {
+				otherTeamFlag = flag;
+			}
+		}
+		return otherTeamFlag;
+	}
+	
+	/**
+	 * Function retrieves all flags in the space currently.
+	 * Function is kind of redundant, but for now we will leave 
+	 * it.
 	 * 
 	 * @param space	a reference to space
 	 * @return	a <code>Set</code> containing flags
 	 */
 	public static Set<Flag> getFlags(Toroidal2DPhysics space) {
-		Set<Flag> flags = new HashSet<Flag>();
-		for(Flag flag : space.getFlags()) {
-			flags.add(flag);
-		}
-		return flags;
+		return space.getFlags();
 	}
-	
+
 	/**
 	 * Function retrieves all unmineable asteroids in space currently
 	 * 
@@ -224,6 +244,38 @@ public class WorldKnowledge {
 		obstacles.addAll(getNonTeamBases(space, ship));
 		obstacles.addAll(getShips(space, ship));
 		return obstacles;
+	}
+	
+	/**
+	 * Function will select flag carrier based on state of ship and
+	 * its distance to flag
+	 * 
+	 * @param space	a reference to space
+	 * @param ship	the ship that wants to find other team flag
+	 * @return	a <code>Ship</code> that is the best candidate for flag carrying 
+	 * 				NOTE: This can return <code>null</code>
+	 */
+	public static Ship getFlagCarrier(Toroidal2DPhysics space, Ship ship) {
+		double shortestDist = Double.MAX_VALUE;
+		double dist = 0.0;
+		Ship candidate = null;
+		Flag otherTeamFlag = WorldKnowledge.getOtherTeamFlag(space, ship);
+		
+		if(otherTeamFlag == null) // No flag so we can't do anything
+			return null;
+		
+		// Check each ship on team
+		for(Ship shipElement : WorldKnowledge.getTeamShips(space)) {
+			if(shipElement.getEnergy() > HEALTHY_ENERGY) { // Find a healthy ship
+				dist = space.findShortestDistance(shipElement.getPosition(), otherTeamFlag.getPosition());
+				// Found potenial candidate
+				if(dist < shortestDist) {
+					shortestDist = dist;
+					candidate = shipElement;
+				}
+			}
+		}
+		return candidate;
 	}
 	
 	/**

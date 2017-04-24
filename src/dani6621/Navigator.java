@@ -103,7 +103,7 @@ public class Navigator {
 				ship.getPosition()) < NavigationMap.SPACING * 2.0 &&
 				path.size() < MINIMAL_PATH) || (goalObject != null && space.
 				isPathClearOfObstructions(ship.getPosition(), goalObject.getPosition(), 
-				WorldKnowledge.getAllObstacles(space, ship), Ship.SHIP_RADIUS * 2))) {
+				WorldKnowledge.getAllObstacles(space, ship), NavigationMap.CLOSE_DISTANCE))) {
 			return new MoveAction(space, ship.getPosition(), goalObject.getPosition(),
 					WorldKnowledge.calculateInterceptVelocity(space, ship, goalObject));
 		}
@@ -116,7 +116,7 @@ public class Navigator {
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
 						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
 			}
-			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 4)) {
+			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 2)) {
 				currentTargetNode = path.pop();
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
 						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
@@ -195,6 +195,15 @@ public class Navigator {
 		if(path == null) 
 			return null;
 		return (List<GraphSearchNode>) path.clone();
+	}
+	
+	/**
+	 * Function retrieves the UUID of goal object
+	 * 
+	 * @return	the <code>UUID</code> of goal object
+	 */
+	public UUID getGoalObjectUUID() {
+		return goalObject.getId();
 	}
 	
 }
