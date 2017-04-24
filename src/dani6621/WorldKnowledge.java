@@ -279,6 +279,16 @@ public class WorldKnowledge {
 	}
 	
 	/**
+	 * 
+	 * @param space
+	 * @param ship
+	 * @return
+	 */
+	public static Ship getShipBuilder(Toroidal2DPhysics space, Ship ship) {
+		
+	}
+	
+	/**
 	 * Function returns closest asteroid to passed ship
 	 * 
 	 * @param space	a reference to space

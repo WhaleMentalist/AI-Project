@@ -11,7 +11,6 @@ import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
 import spacesettlers.objects.Base;
 import spacesettlers.objects.Beacon;
-import spacesettlers.objects.Flag;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
 
@@ -58,6 +57,11 @@ public class TeamKnowledge {
 	private UUID flagCarrier;
 	
 	/**
+	 * Holds the designated base builder for the team
+	 */
+	private UUID baseBuilder;
+	
+	/**
 	 * Initialization constructor
 	 */
 	public TeamKnowledge() {
@@ -66,6 +70,7 @@ public class TeamKnowledge {
 		energyToShip = new HashMap<UUID, Ship>();
 		shipToNavigator = new HashMap<UUID, Navigator>();
 		flagCarrier = null;
+		baseBuilder = null;
 	}
 	
 	/**
@@ -125,6 +130,22 @@ public class TeamKnowledge {
 	 */
 	public UUID getFlagCarrierUUID() {
 		return flagCarrier;
+	}
+	
+	/**
+	 * Function will assign ship as base builder
+	 */
+	public void assignBaseBuilder(Ship ship) {
+		baseBuilder = ship.getId();
+	}
+	
+	/**
+	 * Function returns UUID of base builder
+	 * 
+	 * @return	a <code>UUID</code> representing the base builder
+	 */
+	public UUID getBaseBuilderUUID() {
+		return baseBuilder;
 	}
 	
 	/**
