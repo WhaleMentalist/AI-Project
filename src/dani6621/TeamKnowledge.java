@@ -11,8 +11,10 @@ import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
 import spacesettlers.objects.Base;
 import spacesettlers.objects.Beacon;
+import spacesettlers.objects.Flag;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
+import spacesettlers.utilities.Position;
 
 /**
  * The class is responsible for containing a representation
@@ -27,9 +29,41 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 public class TeamKnowledge {
 	
 	/**
+	 * Number of spawn points flag can be spawned at on other 
+	 * team
+	 */
+	private static final int NUMBER_FLAG_SPAWN = 2;
+	
+	/**
+	 * Top right alcove spot
+	 */
+	private static final Position TOP_RIGHT = new Position(1250, 2500);
+	
+	/**
+	 * Bottom right alcove spot
+	 */
+	private static final Position BOTTOM_RIGHT = new Position(1250, 800);
+	
+	/**
+	 * Top left alcove spot
+	 */
+	private static final Position TOP_LEFT = new Position(350, 250);
+	
+	/**
+	 * Bottom left alcove spot
+	 */
+	private static final Position BOTTOM_LEFT = new Position(375, 800);
+	
+	/**
 	 * Detect if ship has reached base
 	 */
 	private static final double HIT_BASE_DISTANCE = 10.0;
+	
+	/**
+	 * Holds the position that will mark base locations next to 
+	 * flag spawn
+	 */
+	private Position[] convientBaseLocations;
 	
 	/**
 	 * Data structure will track what asteroids are assigned
@@ -69,6 +103,7 @@ public class TeamKnowledge {
 		baseToShip = new HashMap<UUID, Ship>();
 		energyToShip = new HashMap<UUID, Ship>();
 		shipToNavigator = new HashMap<UUID, Navigator>();
+		convientBaseLocations = new Position[NUMBER_FLAG_SPAWN]; // There are two spawn locations
 		flagCarrier = null;
 		baseBuilder = null;
 	}
@@ -149,6 +184,13 @@ public class TeamKnowledge {
 	}
 	
 	/**
+	 * Function will unassign base builder
+	 */
+	public void unassignBaseBuilder() {
+		baseBuilder = null;
+	}
+	
+	/**
 	 * Assign energy source to ship
 	 * 
 	 * @param ship	the ship to be assigned
@@ -220,6 +262,19 @@ public class TeamKnowledge {
 	}
 	
 	/**
+	 * Function will generate a path to goal for the given ship
+	 * 
+	 * @param space	a reference to the space
+	 * @param ship	the ship that requested the path
+	 * @param goal	the goal ship wants to reach
+	 * @param obstacles	the obstacles that could impede ship
+	 */
+	public void generateTeamMemberPath(Toroidal2DPhysics space, Ship ship, 
+			Position goal, Set<AbstractObject> obstacles) {
+		shipToNavigator.get(ship.getId()).generateAStarPath(space, ship, goal, obstacles);
+	}
+	
+	/**
 	 * Retrieves the action for the ship from the navigator
 	 * 
 	 * @param space	a reference to space
@@ -243,10 +298,15 @@ public class TeamKnowledge {
 		
 		for (UUID asteroidId : asteroidToShip.keySet()) {
 			asteroid = (Asteroid) space.getObjectById(asteroidId);
-			ship = (Ship) space.getObjectById(asteroidToShip.get(asteroid.getId()).getId());
-			if (asteroid == null || !(asteroid.isAlive()) || asteroid.isMoveable() || ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD ||
-					!(asteroidId.equals(shipToNavigator.get(ship.getId()).getGoalObjectUUID()))) {
- 				finishedAsteroids.add(asteroid);
+			
+			if(asteroidToShip.get(asteroid.getId()) != null ) {
+				ship = (Ship) space.getObjectById(asteroidToShip.get(asteroid.getId()).getId());
+				
+				if (asteroid == null || !(asteroid.isAlive()) || asteroid.isMoveable() || ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD || 
+						(shipToNavigator.get(ship.getId()).getGoalObjectUUID() == null && !(asteroidId.equals(shipToNavigator.
+								get(ship.getId()).getGoalObjectUUID())))) {
+	 				finishedAsteroids.add(asteroid);
+				}
 			}
 		}
 		
@@ -301,13 +361,77 @@ public class TeamKnowledge {
 			beacon = (Beacon) space.getObjectById(beaconID);
 			ship = (Ship) space.getObjectById(energyToShip.get(beaconID).getId());
 			if (beacon == null || !(beacon.isAlive()) || ship.getEnergy() > WorldKnowledge.ENERGY_THRESHOLD || !(ship.isAlive())
-					|| !(beaconID.equals(shipToNavigator.get(ship.getId()).getGoalObjectUUID()))) {
+					|| (shipToNavigator.get(ship.getId()).getGoalObjectUUID() == null && !(beaconID.equals(shipToNavigator.
+							get(ship.getId()).getGoalObjectUUID())))) {
 				finishedEnergy.add(beacon);
 			}
 		}
 		
 		for (Beacon beaconElement : finishedEnergy) { // Delete beacon from map
-			energyToShip.remove(beaconElement.getId());
+			if(energyToShip.containsKey(beaconElement.getId()))
+				energyToShip.remove(beaconElement.getId());
 		}
+	}
+	
+	/**
+	 * Function will attempt to use location of flag to discern flag spawn location, which
+	 * then figure out base building locations. This occurs ONLY once in the program (i.e 
+	 * during intialization)
+	 * 
+	 * @param space	a reference to space
+	 * @param flag	the flag object to observe
+	 */
+	public void assignBaseBuildingLocations(Toroidal2DPhysics space, Flag flag) {
+		Position flagPosition = flag.getPosition();
+		Position flagSpawn = null;
+		double shortestDist = Double.MAX_VALUE;
+		double dist;
+		
+		dist = space.findShortestDistance(flagPosition, TOP_RIGHT);
+		if(dist < shortestDist)
+			flagSpawn = TOP_RIGHT;
+		
+		dist = space.findShortestDistance(flagPosition, TOP_LEFT);
+		if(dist < shortestDist)
+			flagSpawn = TOP_LEFT;
+		
+		dist = space.findShortestDistance(flagPosition, BOTTOM_RIGHT);
+		if(dist < shortestDist)
+			flagSpawn = BOTTOM_RIGHT;
+		
+		dist = space.findShortestDistance(flagPosition, BOTTOM_LEFT);
+		if(dist < shortestDist)
+			flagSpawn = BOTTOM_LEFT;
+		
+		if(flagSpawn.getX() > 1000.0) { // Flag spawned on right side
+			if(flagSpawn.getY() < 500.0) { // Flag spawned top
+				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() + 550.0);
+			}
+			else { // Flag spawned bottom
+				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() - 550.0);
+			}
+		}
+		else { // Flag spawned on left side
+			if(flagSpawn.getY() < 500.0) { // Flag spawned top
+				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() + 550.0);
+			}
+			else { // Flag spawned bottom
+				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() - 550.0);
+			}
+			
+		}
+	}
+	
+	/**
+	 * Function returns the list of convient base locations
+	 * 
+	 * @return	the positions of the base building spots
+	 */
+	public Position[] getConvientBaseBuildingLocations() {
+		return convientBaseLocations;
 	}
 }

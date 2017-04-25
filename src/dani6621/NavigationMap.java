@@ -325,11 +325,11 @@ public class NavigationMap {
 	/** 
 	 * Finds the coordinate vertex that is closest to the passed object
 	 * 
-	 * @param myObj - Passes an abstract object
+	 * @param position	position of object
 	 * @return Vertex object that is closest to the argument
 	 */
-	public NavigationVertex findNearestVertex(AbstractObject myObj) {
-		Position objPos = myObj.getPosition();
+	public NavigationVertex findNearestVertex(Position position) {
+		Position objPos = position;
 		Double xCoord = objPos.getX();
 		Double yCoord = objPos.getY();
 		

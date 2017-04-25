@@ -1,6 +1,9 @@
 package dani6621;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.Stack;
+import java.util.UUID;
 
 import dani6621.GraphSearch.GraphSearchNode;
 import spacesettlers.actions.AbstractAction;
@@ -9,6 +12,7 @@ import spacesettlers.actions.MoveAction;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
+import spacesettlers.utilities.Position;
 
 /**
  * The class is designed to guide the agent along a path that
@@ -152,6 +156,33 @@ public class Navigator {
 			throw new NavigationFailureException("Navigation failed! No object was specified!");
 		}
 		
+		GraphSearch graphSearch = new GraphSearch(map, ship, goal.getPosition()); // Give search parameters
+		
+		try {
+			path = graphSearch.aStarSearch(obstacles); // Generate a path
+		}
+		catch(GraphSearch.SearchFailureException e) {
+			path = new Stack<GraphSearchNode>();
+		}
+	}
+	
+	/**
+	 * Function will generate a path to the objective using a 
+	 * <code>GraphSearch</code> function that implements 'A*' search
+	 * algorithms.
+	 * 
+	 * @param space the reference to game space used for utility functions
+	 * @param ship the ship that is transversing the path
+	 * @param goal the goal the ship needs to reach
+	 * @param obstacles the obstacles to avoid
+	 */
+	public void generateAStarPath(Toroidal2DPhysics space, AbstractObject ship, 
+			Position goal, Set<AbstractObject> obstacles) {
+		
+		currentTargetNode = null;
+		map = new NavigationMap(space, DEBUG_MODE); // Generate graph for problem
+		goalObject = null;
+		
 		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
 		
 		try {
@@ -175,7 +206,7 @@ public class Navigator {
 		currentTargetNode = null;
 		map = new NavigationMap(space, DEBUG_MODE); // Generate graph for problem
 		goalObject = goal;
-		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
+		GraphSearch graphSearch = new GraphSearch(map, ship, goal.getPosition()); // Give search parameters
 		
 		try {
 			path = graphSearch.greedyBFSearch(); // Generate a path
@@ -201,9 +232,13 @@ public class Navigator {
 	 * Function retrieves the UUID of goal object
 	 * 
 	 * @return	the <code>UUID</code> of goal object
+	 * 			NOTE: This can return <code>null</code>
 	 */
 	public UUID getGoalObjectUUID() {
-		return goalObject.getId();
+		UUID id = null;
+		if(goalObject != null)
+			id = goalObject.getId();
+		return id;
 	}
 	
 }

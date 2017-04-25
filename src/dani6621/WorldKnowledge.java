@@ -30,6 +30,11 @@ public class WorldKnowledge {
 	public static final String TEAM_NAME = "Padawan_Daniel_and_Flood";
 	
 	/**
+	 * Dictates if base is at the location
+	 */
+	public static final double BASE_AT_LOCATION_THRESHOLD = 100.0;
+	
+	/**
 	 * Used as threshold for ship considering base as energy source
 	 */
 	public static final double SUFFICIENT_ENERGY = 1000;
@@ -38,6 +43,11 @@ public class WorldKnowledge {
 	 * Threshold for resource capacity
 	 */
 	public static final int RESOURCE_THRESHOLD = 1000;
+	
+	/**
+	 * Signifies if ship is close enough to location to build a base
+	 */
+	public static final double BASE_BUILD_THRESHOLD = 50.0;
 
 	/**
 	 * Threshold for refuel
@@ -59,10 +69,6 @@ public class WorldKnowledge {
      * Helps to avoid agent from chasing asteroid at a slow speed
      */
 	public static final double MIN_VELOCITY_MAGNITUDE = 35.0;
-	
-	public static final Position flagOneSpawn;
-	
-	public static final Position flagTwoSpawn;
     
     /**
      * Contains information on team members' actions
@@ -283,14 +289,37 @@ public class WorldKnowledge {
 	}
 	
 	/**
+	 * Function will retrieve the ship that will act as the base builder...
 	 * 
-	 * @param space
-	 * @param ship
-	 * @return
+	 * @param space	a space reference
+	 * @param ship 	the ship used to establish a team comparison
+	 * 
+	 * @return	the <code>Ship</code> selected for base building...
+	 * 				NOTE: This can return <code>null</code>
 	 */
-	public static Ship getShipBuilder(Toroidal2DPhysics space, Ship ship) {
+	public Ship getBaseBuilder(Toroidal2DPhysics space, Ship ship) {
 		Ship candidate = null;
-		return null;
+		double shortestDist = Double.MAX_VALUE;
+		double dist = 0.0;
+		Position[] baseLocations = teamKnowledge.getConvientBaseBuildingLocations();
+		
+		// Bases already built! We don't need to assign a base builder
+		if(isBaseBuiltAtLocation(space, ship, baseLocations[0]) && isBaseBuiltAtLocation(space, ship, baseLocations[1])) {
+			return null;
+		}
+		
+		for(Ship shipElement : WorldKnowledge.getTeamShips(space)) {
+			
+			if(shipElement.getEnergy() > HEALTHY_ENERGY && shipElement.getResources().getTotal() < WorldKnowledge.RESOURCE_THRESHOLD) {
+				dist = Math.min(space.findShortestDistance(shipElement.getPosition(), baseLocations[0]), 
+						space.findShortestDistance(shipElement.getPosition(), baseLocations[1]));
+				if(dist < shortestDist) {
+					candidate = shipElement;
+					shortestDist = dist;
+				}
+			}
+		}
+		return candidate;
 	}
 	
 	/**
@@ -388,6 +417,51 @@ public class WorldKnowledge {
             }
         }
         return candidate;
+    }
+    
+    /**
+     * Function will check if team base is built at the specified location
+     * 
+     * @param space	a reference to space
+     * @param ship	the ship that dicates the team for bases
+     * @param position	the position we wish to check
+     * @return	the result as boolen
+     */
+    public boolean isBaseBuiltAtLocation(Toroidal2DPhysics space, Ship ship, Position position) {
+    	boolean result = false;
+    	for(Base base : WorldKnowledge.getTeamBases(space, ship)) {
+    		if(space.findShortestDistance(base.getPosition(), position) < BASE_AT_LOCATION_THRESHOLD) {
+    			result = true;
+    			break;
+    		}
+    	}
+    	return result;
+    }
+    
+    /**
+     * Function will return the closest base building site
+     * 
+     * @param space	a reference to space
+     * @param ship	the ship that wishes to find base building location
+     * @return	a <code>Position</code> representing base building site
+     */
+    public Position getClosestBaseBuildingSite(Toroidal2DPhysics space, Ship ship) {
+    	double shortestDist = Double.MAX_VALUE;
+    	double dist = 0.0;
+    	Position candidate = null;
+    	
+    	Position[] baseSites = teamKnowledge.getConvientBaseBuildingLocations();
+    	
+    	for(Position pos : baseSites) {
+    		dist = space.findShortestDistance(pos, ship.getPosition());
+    		
+    		if(dist < shortestDist && !(isBaseBuiltAtLocation(space, ship, pos))) {
+    			shortestDist = dist;
+    			candidate = pos;
+    		}
+    	}
+    	
+    	return candidate;
     }
     
     // TODO: Change way ship navigates using functions below!!! Need to experiment with controls... Definately look into overdamp vs underdamp

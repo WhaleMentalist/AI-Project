@@ -136,6 +136,8 @@ public class HumanTeamClient extends TeamClient {
 					if (mouseClickMove == null || mouseClickMove.isMovementFinished(space) || space.findShortestDistance(lastMouseClick, myPosition) > CLICK_DISTANCE) {
 						mouseClickMove = new MoveAction(space, myPosition, lastMouseClick);
 						
+						System.out.println(lastMouseClick.toString());
+						
 						graphicsToAdd.add(new StarGraphics(3, super.teamColor, lastMouseClick));
 						LineGraphics line = new LineGraphics(myPosition, lastMouseClick, 
 								space.findShortestDistanceVector(myPosition, lastMouseClick));

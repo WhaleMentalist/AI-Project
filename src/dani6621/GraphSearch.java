@@ -5,6 +5,7 @@ import java.util.*;
 import dani6621.NavigationMap.NavigationVertex;
 import dani6621.NavigationMap.NavigationVertexKey;
 import spacesettlers.objects.AbstractObject;
+import spacesettlers.utilities.Position;
 
 /**
  * Class will contain data members such as initial state (node), 
@@ -160,14 +161,14 @@ public class GraphSearch {
 	 * 
 	 * @param gameMap the graph that the algorithm will search
 	 * @param ship the ship object to get location
-	 * @param object the object to get the location
+	 * @param objectPosition the object to get the location
 	 */
-	public GraphSearch(NavigationMap gameMap, AbstractObject ship, AbstractObject object) {
+	public GraphSearch(NavigationMap gameMap, AbstractObject ship, Position objectPosition) {
 		map = gameMap; // Give reference to current game map
 		
 		// Get vertices closest to objects to help initialize search
-		NavigationVertex shipVertex = map.findNearestVertex(ship);
-		NavigationVertex objectVertex = map.findNearestVertex(object);
+		NavigationVertex shipVertex = map.findNearestVertex(ship.getPosition());
+		NavigationVertex objectVertex = map.findNearestVertex(objectPosition);
 		
 		goalNode = new GraphSearchNode(objectVertex);
 		goalNode.hCost = 0;	// Goal node heuristic is zero

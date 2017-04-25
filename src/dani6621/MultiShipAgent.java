@@ -22,6 +22,7 @@ import spacesettlers.objects.Ship;
 import spacesettlers.objects.powerups.SpaceSettlersPowerupEnum;
 import spacesettlers.objects.resources.ResourcePile;
 import spacesettlers.simulator.Toroidal2DPhysics;
+import spacesettlers.utilities.Position;
 
 /**
  * Controls multiple ships using knowledge representation that maps ships to
@@ -33,9 +34,9 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 public class MultiShipAgent extends TeamClient {
 	
 	/**
-	 * Amount of time that must elapse before agent can replan
+	 * Amount of time that must elapse before agent can replan navigation
 	 */
-	private static final int REPLAN_TIME_STEP = 50;
+	private static final int REPLAN_TIME_STEP = 30;
 	
 	/**
 	 * Number of new plans that can form if search fails for navigation
@@ -56,15 +57,23 @@ public class MultiShipAgent extends TeamClient {
 	 * Member will contain information pertaining to team actions
 	 */
 	private TeamKnowledge teamKnowledge;
+	
+	/**
+	 * Member will contain world state information
+	 */
+	private WorldKnowledge knowledge;
 
 	@Override
 	public Map<UUID, AbstractAction> getMovementStart(Toroidal2DPhysics space,
 			Set<AbstractActionableObject> actionableObjects) {
 		
 		if(!INITIALIZED) { // Initialize beginning ships with individual navigators
+			Ship shipToken = null;
 			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
 				teamKnowledge.assignShipToNavigator(ship, new Navigator(DEBUG_MODE));
+				shipToken = ship;
 			}
+			teamKnowledge.assignBaseBuildingLocations(space, WorldKnowledge.getOtherTeamFlag(space, shipToken));
 			INITIALIZED = true;
 		}
 		
@@ -79,6 +88,8 @@ public class MultiShipAgent extends TeamClient {
                 actions.put(actionable.getId(), new DoNothingAction());
             }
         }
+        
+        
         return actions;
 	}
 
@@ -97,7 +108,27 @@ public class MultiShipAgent extends TeamClient {
 	public Map<UUID, PurchaseTypes> getTeamPurchases(Toroidal2DPhysics space,
 			Set<AbstractActionableObject> actionableObjects, ResourcePile resourcesAvailable,
 			PurchaseCosts purchaseCosts) {
-		return null;
+		HashMap<UUID, PurchaseTypes> purchases = new HashMap<UUID, PurchaseTypes>();
+		Ship ship;
+		
+		// We can afford a base to purchase!
+		if (purchaseCosts.canAfford(PurchaseTypes.BASE, resourcesAvailable)) {
+			for (AbstractActionableObject actionableObject : actionableObjects) {
+				if(actionableObject instanceof Ship) {
+					ship = (Ship) actionableObject;
+					if(teamKnowledge.getBaseBuilderUUID() != null && ship.getId().equals(teamKnowledge.getBaseBuilderUUID())) {
+						if(space.findShortestDistance(ship.getPosition(), knowledge.getClosestBaseBuildingSite(space, ship)) 
+								< WorldKnowledge.BASE_BUILD_THRESHOLD) {
+							purchases.put(ship.getId(), PurchaseTypes.BASE);
+							teamKnowledge.unassignBaseBuilder();
+							System.out.println("Buying base");
+						}
+					}
+				}
+			}
+		}
+		
+		return purchases;
 	}
 
 	@Override
@@ -126,7 +157,7 @@ public class MultiShipAgent extends TeamClient {
      */
     public AbstractAction getShipAction(Toroidal2DPhysics space, Ship ship) {
         AbstractAction newAction = new DoNothingAction();
-        WorldKnowledge knowledge = new WorldKnowledge(teamKnowledge);
+        knowledge = new WorldKnowledge(teamKnowledge);
         
         if(teamKnowledge.getFlagCarrierUUID() == null) { // Need to assign flag carrier
         	Ship flagCarrier = WorldKnowledge.getFlagCarrier(space, ship);
@@ -135,6 +166,15 @@ public class MultiShipAgent extends TeamClient {
         	}
         }
         
+        if(teamKnowledge.getBaseBuilderUUID() == null && space.getCurrentTimestep() > 3000) { // Need to assign base builder
+        	Ship baseBuilder = knowledge.getBaseBuilder(space, ship);
+        	if(baseBuilder != null) {
+        		teamKnowledge.assignBaseBuilder(ship);
+        		System.out.println("Assigning base builder!");
+        	}
+        }
+        
+        // Flag Gatherer
         if(ship.getId().equals(teamKnowledge.getFlagCarrierUUID())) {
         	if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Low Energy State
             	retrieveEnergy(space, ship, knowledge);
@@ -151,6 +191,16 @@ public class MultiShipAgent extends TeamClient {
         	}
         	else {
         		returnResources(space, ship, knowledge);
+        		newAction = teamKnowledge.getTeamMemberAction(space, ship);
+        	}
+        }
+        else if(ship.getId().equals(teamKnowledge.getBaseBuilderUUID())) { // Base Builder
+        	if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Low Energy State
+            	retrieveEnergy(space, ship, knowledge);
+                newAction = teamKnowledge.getTeamMemberAction(space, ship);
+            }
+        	else { // Transit / Idle
+        		transitBaseBuildingSite(space, ship, knowledge);
         		newAction = teamKnowledge.getTeamMemberAction(space, ship);
         	}
         }
@@ -248,10 +298,11 @@ public class MultiShipAgent extends TeamClient {
     }
     
     /**
+     * Function will provided actions that allow ship to get flag
      * 
-     * @param space
-     * @param ship
-     * @param knowledge
+     * @param space	a reference to space
+     * @param ship	the ship going for the flag
+     * @param knowledge	the world state
      */
     private void retrieveFlag(Toroidal2DPhysics space, Ship ship, WorldKnowledge knowledge) {
     	Flag closestFlag = WorldKnowledge.getOtherTeamFlag(space, ship);
@@ -274,6 +325,7 @@ public class MultiShipAgent extends TeamClient {
      * 
      * @param space	the space the ship is in
      * @param ship	the reference to specified ship
+     * @param knowledge	the world state
      * 
      */
     private void returnResources(Toroidal2DPhysics space, Ship ship, WorldKnowledge knowledge) {
@@ -307,6 +359,24 @@ public class MultiShipAgent extends TeamClient {
                 	}
                 	break;
                 }
+            }
+        }
+    }
+    
+    /**
+     * Function will form path to base build site
+     * 
+     * @param space	the space the ship is in
+     * @param ship	the reference to specified ship
+     * @param knowledge	the world state
+     */
+    private void transitBaseBuildingSite(Toroidal2DPhysics space, Ship ship, WorldKnowledge knowledge) {
+    	Position position = knowledge.getClosestBaseBuildingSite(space, ship);
+    	if(position != null) { // Goto base that was found
+        	// Replan route
+            if(space.getCurrentTimestep() % REPLAN_TIME_STEP == 0) {
+                		teamKnowledge.generateTeamMemberPath(space, ship, position, 
+                    			WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship));
             }
         }
     }
