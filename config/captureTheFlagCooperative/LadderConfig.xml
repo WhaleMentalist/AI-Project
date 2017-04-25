@@ -25,8 +25,8 @@
 			<configFile>passive-flag3ships-clientinit.xml</configFile>
 		</HighLevelTeamConfig>
 		<HighLevelTeamConfig>
-			<teamName>RandomTeam</teamName>
-			<configFile>random-flag-clientinit.xml</configFile>
+			<teamName>Padawan_Daniel_and_Flood</teamName>
+			<configFile>spacesettlersinit.xml</configFile>
 		</HighLevelTeamConfig>
 	</variableTeams>
 

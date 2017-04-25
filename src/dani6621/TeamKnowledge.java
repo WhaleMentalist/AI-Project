@@ -29,7 +29,7 @@ public class TeamKnowledge {
 	/**
 	 * Detect if ship has reached base
 	 */
-	private static final double HIT_BASE_ENERGY = 1000.0;
+	private static final double HIT_BASE_DISTANCE = 10.0;
 	
 	/**
 	 * Data structure will track what asteroids are assigned
@@ -272,7 +272,8 @@ public class TeamKnowledge {
 			ship = (Ship) space.getObjectById(baseToShip.get(base.getId()).getId());
 			
 			if(ship == null || !(ship.isAlive()) || ship.getResources().getTotal() == 0 && 
-					ship.getEnergy() > HIT_BASE_ENERGY && !(ship.isCarryingFlag())) {
+					space.findShortestDistance(ship.getPosition(), base.getPosition()) < HIT_BASE_DISTANCE 
+					&& !(ship.isCarryingFlag())) {
 				finishedBase.add(base); // Ship managed to get to base
 				
 				if(ship.getId().equals(flagCarrier)) // Flag carrier hit base so unassign flag carrier

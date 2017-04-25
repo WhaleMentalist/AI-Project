@@ -154,7 +154,7 @@ public class MultiShipAgent extends TeamClient {
         		newAction = teamKnowledge.getTeamMemberAction(space, ship);
         	}
         }
-        else {
+        else { // Asteroid Gatherer
         	// Asteroid Gathering Component
             if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Low Energy State
             	retrieveEnergy(space, ship, knowledge);
@@ -194,7 +194,7 @@ public class MultiShipAgent extends TeamClient {
         		for(int i = 0; ; ++i) {
         			try {
         				teamKnowledge.generateTeamMemberPath(space, ship, 
-                    			closestAsteroid, WorldKnowledge.getAllObstacles(space, ship)); // Gets the path of ship
+                    			closestAsteroid, WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship)); // Gets the path of ship
         			}
         			catch(NavigationFailureException e) {
         				if(i < MAX_RETRIES) {
@@ -203,7 +203,7 @@ public class MultiShipAgent extends TeamClient {
                 				teamKnowledge.unassignAsteroidToShip(closestAsteroid); // Need to unassign asteroid in team knowledge
                 				closestAsteroid = knowledge.getClosestAsteroid(space, ship, failedAsteroids); // Find closest asteroid to mine
                 				teamKnowledge.generateTeamMemberPath(space, ship, 
-                            			closestAsteroid, WorldKnowledge.getAllObstacles(space, ship)); // Gets the path of ship
+                            			closestAsteroid, WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship)); // Gets the path of ship
         					}
         				}
         				else {

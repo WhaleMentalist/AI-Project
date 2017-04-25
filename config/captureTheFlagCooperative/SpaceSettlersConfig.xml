@@ -36,8 +36,8 @@
 			<configFile>passive-flag2ships-clientinit.xml</configFile>
 		</HighLevelTeamConfig>
 		<HighLevelTeamConfig>
-			<teamName>Team2</teamName>
-			<configFile>passive-flag3ships-clientinit.xml</configFile>
+			<teamName>Padawan_Daniel_and_Flood</teamName>
+			<configFile>spacesettlersinit.xml</configFile>
 		</HighLevelTeamConfig>		
 	</teams>
 
@@ -54,7 +54,7 @@
 			<boundingBoxLRY>740</boundingBoxLRY>
 		</BaseConfig>
 		<BaseConfig>
-			<teamName>Team2</teamName>
+			<teamName>Padawan_Daniel_and_Flood</teamName>
 			<fixedLocation>true</fixedLocation>
 			<x>900</x>
 			<y>540</y>
@@ -78,7 +78,7 @@
 			</startY>
 		</FlagConfig>
 		<FlagConfig>
-			<teamName>Team2</teamName>
+			<teamName>Padawan_Daniel_and_Flood</teamName>
 			<startX>
 				<int>1250</int>
 				<int>1250</int>

@@ -59,6 +59,10 @@ public class WorldKnowledge {
      * Helps to avoid agent from chasing asteroid at a slow speed
      */
 	public static final double MIN_VELOCITY_MAGNITUDE = 35.0;
+	
+	public static final Position flagOneSpawn;
+	
+	public static final Position flagTwoSpawn;
     
     /**
      * Contains information on team members' actions
@@ -285,7 +289,8 @@ public class WorldKnowledge {
 	 * @return
 	 */
 	public static Ship getShipBuilder(Toroidal2DPhysics space, Ship ship) {
-		
+		Ship candidate = null;
+		return null;
 	}
 	
 	/**
