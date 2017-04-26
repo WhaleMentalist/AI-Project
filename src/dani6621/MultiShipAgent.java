@@ -34,6 +34,13 @@ import spacesettlers.utilities.Position;
 public class MultiShipAgent extends TeamClient {
 	
 	/**
+	 * Establish when it is good time to start gathering flags...
+	 * This allows agents to gather resources neccessary for base 
+	 * building near alcove for maximum effect
+	 */
+	private static final int FLAG_GATHERING_TIME = 3000;
+	
+	/**
 	 * Amount of time that must elapse before agent can replan navigation
 	 */
 	private static final int REPLAN_TIME_STEP = 30;
@@ -47,6 +54,12 @@ public class MultiShipAgent extends TeamClient {
 	 * Track if the program has initialized properly
 	 */
 	private boolean INITIALIZED = false;
+	
+	/**
+	 * Flag if new ship was bought and needs to be assigned 
+	 * navigator
+	 */
+	private boolean BOUGHT_SHIP = false;
 	
 	/**
 	 * Debug mode for graphics
@@ -75,6 +88,15 @@ public class MultiShipAgent extends TeamClient {
 			}
 			teamKnowledge.assignBaseBuildingLocations(space, WorldKnowledge.getOtherTeamFlag(space, shipToken));
 			INITIALIZED = true;
+		}
+		
+		if(BOUGHT_SHIP) { // When ship is bought it must be assigned a navigator
+			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
+				if(!(teamKnowledge.shipAssignedNavigator(ship))) {
+					teamKnowledge.assignShipToNavigator(ship, new Navigator(DEBUG_MODE));
+				}
+			}
+			BOUGHT_SHIP = false;
 		}
 		
 		HashMap<UUID, AbstractAction> actions = new HashMap<UUID, AbstractAction>();
@@ -128,6 +150,22 @@ public class MultiShipAgent extends TeamClient {
 			}
 		}
 		
+		// We can start buying ships after we have established convient bases
+		if (purchaseCosts.canAfford(PurchaseTypes.SHIP, resourcesAvailable) && 
+				knowledge.isBaseBuiltAtLocation(space, "Padawan_Daniel_and_Flood", teamKnowledge.getConvientBaseBuildingLocations()[0])
+				&& knowledge.isBaseBuiltAtLocation(space, "Padawan_Daniel_and_Flood", teamKnowledge.getConvientBaseBuildingLocations()[1]) 
+				&& WorldKnowledge.getTeamShips(space).size() < 5) {
+			for (AbstractActionableObject actionableObject : actionableObjects) {
+				if (actionableObject instanceof Base) {
+					Base base = (Base) actionableObject;
+					purchases.put(base.getId(), PurchaseTypes.SHIP);
+					BOUGHT_SHIP = true;
+					System.out.println("Buying ship!");
+					break;
+				}
+			}
+		}
+		
 		return purchases;
 	}
 
@@ -159,14 +197,14 @@ public class MultiShipAgent extends TeamClient {
         AbstractAction newAction = new DoNothingAction();
         knowledge = new WorldKnowledge(teamKnowledge);
         
-        if(teamKnowledge.getFlagCarrierUUID() == null) { // Need to assign flag carrier
+        if(teamKnowledge.getFlagCarrierUUID() == null && space.getCurrentTimestep() > FLAG_GATHERING_TIME) { // Need to assign flag carrier
         	Ship flagCarrier = WorldKnowledge.getFlagCarrier(space, ship);
         	if(flagCarrier != null) {
         		teamKnowledge.assignFlagCarrier(flagCarrier);
         	}
         }
         
-        if(teamKnowledge.getBaseBuilderUUID() == null && space.getCurrentTimestep() > 3000) { // Need to assign base builder
+        if(teamKnowledge.getBaseBuilderUUID() == null && space.getCurrentTimestep() > FLAG_GATHERING_TIME) { // Need to assign base builder
         	Ship baseBuilder = knowledge.getBaseBuilder(space, ship);
         	if(baseBuilder != null) {
         		teamKnowledge.assignBaseBuilder(ship);
@@ -185,7 +223,7 @@ public class MultiShipAgent extends TeamClient {
         		newAction = teamKnowledge.getTeamMemberAction(space, ship);
         		
         		if(newAction instanceof DoNothingAction) { // Algorithm couldn't find a suitable flag
-            		retrieveEnergy(space, ship, knowledge); // Let's just get some energy to help
+            		transitToLocation(space, ship, knowledge, teamKnowledge.getConvientBaseBuildingLocations()[0]); // Let's just goto position near flag
             		newAction = teamKnowledge.getTeamMemberAction(space, ship);
             	}
         	}
@@ -224,7 +262,6 @@ public class MultiShipAgent extends TeamClient {
             	}
             }
         }
-        
         return newAction;
     }
     
@@ -375,9 +412,26 @@ public class MultiShipAgent extends TeamClient {
     	if(position != null) { // Goto base that was found
         	// Replan route
             if(space.getCurrentTimestep() % REPLAN_TIME_STEP == 0) {
-                		teamKnowledge.generateTeamMemberPath(space, ship, position, 
+            	System.out.println("Going to build site");
+                teamKnowledge.generateTeamMemberPath(space, ship, position, 
                     			WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship));
             }
+        }
+    }
+    
+    /**
+     * Function will form path to location
+     * 
+     * @param space	a reference to space
+     * @param ship	the reference to ship
+     * @param knowledge	the world state
+     * @param location 	the location ship wants to goto
+     */
+    private void transitToLocation(Toroidal2DPhysics space, Ship ship, WorldKnowledge knowledge, Position location) {
+    	// Replan route
+        if(space.getCurrentTimestep() % REPLAN_TIME_STEP == 0) {
+            		teamKnowledge.generateTeamMemberPath(space, ship, location, 
+                			WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship));
         }
     }
 }

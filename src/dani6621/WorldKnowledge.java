@@ -52,12 +52,12 @@ public class WorldKnowledge {
 	/**
 	 * Threshold for refuel
 	 */
-	public static final double ENERGY_THRESHOLD = Ship.SHIP_MAX_ENERGY / 2.0;
+	public static final double ENERGY_THRESHOLD = Ship.SHIP_MAX_ENERGY * 0.4;
 	
 	/**
 	 * Threshold that marks a healthy ship
 	 */
-	public static final double HEALTHY_ENERGY = Ship.SHIP_MAX_ENERGY * 0.75;
+	public static final double HEALTHY_ENERGY = Ship.SHIP_MAX_ENERGY * 0.65;
 	
     /**
      * If a maximum velocity is imposed the agent has better
@@ -156,6 +156,23 @@ public class WorldKnowledge {
 		Set<Base> bases = new HashSet<Base>();
 		for(Base base : space.getBases()) {
 			if(base.getTeam().getTeamName().equals(ship.getTeamName())) {
+				bases.add(base);
+			}
+		}
+		return bases;
+	}
+	
+	/**
+	 * Function retrieves all team bases
+	 * 
+	 * @param space	a reference to space
+	 * @param teamName	the team name that will be used to compare team
+	 * @return	a <code>Set</code> of bases on same team as ship
+	 */
+	public static Set<Base> getTeamBases(Toroidal2DPhysics space, String teamName) {
+		Set<Base> bases = new HashSet<Base>();
+		for(Base base : space.getBases()) {
+			if(base.getTeam().getTeamName().equals(teamName)) {
 				bases.add(base);
 			}
 		}
@@ -430,6 +447,25 @@ public class WorldKnowledge {
     public boolean isBaseBuiltAtLocation(Toroidal2DPhysics space, Ship ship, Position position) {
     	boolean result = false;
     	for(Base base : WorldKnowledge.getTeamBases(space, ship)) {
+    		if(space.findShortestDistance(base.getPosition(), position) < BASE_AT_LOCATION_THRESHOLD) {
+    			result = true;
+    			break;
+    		}
+    	}
+    	return result;
+    }
+    
+    /**
+     * Function will check if team base is built at the specified location
+     * 
+     * @param space	a reference to space
+     * @param teamName	the team we are comparing
+     * @param position	the position we wish to check
+     * @return	the result as boolen
+     */
+    public boolean isBaseBuiltAtLocation(Toroidal2DPhysics space, String teamName, Position position) {
+    	boolean result = false;
+    	for(Base base : WorldKnowledge.getTeamBases(space, teamName)) {
     		if(space.findShortestDistance(base.getPosition(), position) < BASE_AT_LOCATION_THRESHOLD) {
     			result = true;
     			break;

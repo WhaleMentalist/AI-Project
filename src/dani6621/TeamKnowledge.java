@@ -37,7 +37,7 @@ public class TeamKnowledge {
 	/**
 	 * Top right alcove spot
 	 */
-	private static final Position TOP_RIGHT = new Position(1250, 2500);
+	private static final Position TOP_RIGHT = new Position(1250, 250);
 	
 	/**
 	 * Bottom right alcove spot
@@ -52,7 +52,7 @@ public class TeamKnowledge {
 	/**
 	 * Bottom left alcove spot
 	 */
-	private static final Position BOTTOM_LEFT = new Position(375, 800);
+	private static final Position BOTTOM_LEFT = new Position(350, 800);
 	
 	/**
 	 * Detect if ship has reached base
@@ -86,7 +86,7 @@ public class TeamKnowledge {
 	private HashMap<UUID, Navigator> shipToNavigator;
 	
 	/**
-	 * Holds the designated flag carrier for the team
+	 * Holds the first designated flag carrier for the team
 	 */
 	private UUID flagCarrier;
 	
@@ -233,6 +233,15 @@ public class TeamKnowledge {
 	 */
 	public void assignShipToNavigator(Ship ship, Navigator navigator) {
 		shipToNavigator.put(ship.getId(), navigator);
+	}
+	
+	/**
+	 * Function will detect if ship has navigator assigned to it
+	 * @param ship	the ship that wil be checked
+	 * @return	a boolean of the result
+	 */
+	public boolean shipAssignedNavigator(Ship ship) {
+		return shipToNavigator.containsKey(ship.getId());
 	}
 	
 	/**
@@ -388,42 +397,54 @@ public class TeamKnowledge {
 		double dist;
 		
 		dist = space.findShortestDistance(flagPosition, TOP_RIGHT);
-		if(dist < shortestDist)
+		if(dist < shortestDist) {
 			flagSpawn = TOP_RIGHT;
+			shortestDist = dist;
+		}
 		
 		dist = space.findShortestDistance(flagPosition, TOP_LEFT);
-		if(dist < shortestDist)
+		if(dist < shortestDist) {
 			flagSpawn = TOP_LEFT;
+			shortestDist = dist;
+		}
 		
 		dist = space.findShortestDistance(flagPosition, BOTTOM_RIGHT);
-		if(dist < shortestDist)
+		if(dist < shortestDist) {
 			flagSpawn = BOTTOM_RIGHT;
+			shortestDist = dist;
+		}
 		
 		dist = space.findShortestDistance(flagPosition, BOTTOM_LEFT);
-		if(dist < shortestDist)
+		if(dist < shortestDist) {
 			flagSpawn = BOTTOM_LEFT;
+			shortestDist = dist;
+		}
 		
 		if(flagSpawn.getX() > 1000.0) { // Flag spawned on right side
 			if(flagSpawn.getY() < 500.0) { // Flag spawned top
+				System.out.println("Top-Right");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
 				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() + 550.0);
 			}
 			else { // Flag spawned bottom
+				System.out.println("Bottom-Right");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
 				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() - 550.0);
 			}
 		}
 		else { // Flag spawned on left side
 			if(flagSpawn.getY() < 500.0) { // Flag spawned top
+				System.out.println("Top-Left");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
 				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() + 550.0);
 			}
 			else { // Flag spawned bottom
+				System.out.println("Bottom-Left");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
 				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() - 550.0);
 			}
-			
 		}
+		System.out.println(convientBaseLocations[0].toString() + "     " + convientBaseLocations[1].toString());
 	}
 	
 	/**
