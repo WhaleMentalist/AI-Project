@@ -25,11 +25,6 @@ import spacesettlers.utilities.Vector2D;
 public class WorldKnowledge {
 	
 	/**
-	 * Used to help gather team ships
-	 */
-	public static final String TEAM_NAME = "Padawan_Daniel_and_Flood";
-	
-	/**
 	 * Dictates if base is at the location
 	 */
 	public static final double BASE_AT_LOCATION_THRESHOLD = 100.0;
@@ -76,12 +71,18 @@ public class WorldKnowledge {
     private TeamKnowledge teamKnowledge;
     
     /**
+     * Contains the reference to agent
+     */
+    private final String teamName;
+    
+    /**
      * Basic constructor
      * 
      * @param teamInfo	the information about the team
      */
-    public WorldKnowledge(TeamKnowledge teamInfo) {
+    public WorldKnowledge(TeamKnowledge teamInfo, String teamNameCopy) {
     	teamKnowledge = teamInfo;
+    	teamName = teamNameCopy;
     }
 	
 	/**
@@ -97,6 +98,7 @@ public class WorldKnowledge {
 				mineableAsteroids.add(asteroid);
 			}
 		}
+		
 		return mineableAsteroids;
 	}
 	
@@ -110,7 +112,7 @@ public class WorldKnowledge {
 	public static Flag getOtherTeamFlag(Toroidal2DPhysics space, Ship ship) {
 		Flag otherTeamFlag = null;
 		for(Flag flag : space.getFlags()) {
-			if(!(flag.getTeamName().equals(ship.getTeamName()))) {
+			if(!(flag.getTeamName().equalsIgnoreCase(ship.getTeamName()))) {
 				otherTeamFlag = flag;
 			}
 		}
@@ -155,7 +157,7 @@ public class WorldKnowledge {
 	public static Set<Base> getTeamBases(Toroidal2DPhysics space, Ship ship) {
 		Set<Base> bases = new HashSet<Base>();
 		for(Base base : space.getBases()) {
-			if(base.getTeam().getTeamName().equals(ship.getTeamName())) {
+			if(base.getTeam().getTeamName().equalsIgnoreCase((ship.getTeamName()))) {
 				bases.add(base);
 			}
 		}
@@ -172,7 +174,7 @@ public class WorldKnowledge {
 	public static Set<Base> getTeamBases(Toroidal2DPhysics space, String teamName) {
 		Set<Base> bases = new HashSet<Base>();
 		for(Base base : space.getBases()) {
-			if(base.getTeam().getTeamName().equals(teamName)) {
+			if(base.getTeam().getTeamName().equalsIgnoreCase(teamName)) {
 				bases.add(base);
 			}
 		}
@@ -202,7 +204,7 @@ public class WorldKnowledge {
 	public static Set<Base> getNonTeamBases(Toroidal2DPhysics space, Ship ship) {
 		Set<Base> bases = new HashSet<Base>();
 		for(Base base : space.getBases()) {
-			if(!(base.getTeam().getTeamName().equals(ship.getTeamName()))) {
+			if(!(base.getTeam().getTeamName().equalsIgnoreCase(ship.getTeamName()))) {
 				bases.add(base);
 			}
 		}
@@ -233,10 +235,10 @@ public class WorldKnowledge {
 	 * @param space	a reference to space
 	 * @return	a <code>Set</code> of all team ships in game
 	 */
-	public static Set<Ship> getTeamShips(Toroidal2DPhysics space) {
+	public Set<Ship> getTeamShips(Toroidal2DPhysics space) {
 		Set<Ship> ships = new HashSet<Ship>();
 		for(Ship ship : space.getShips()) {
-			if(ship.getTeamName().equals(TEAM_NAME)) {
+			if(ship.getTeamName().equalsIgnoreCase(teamName)) {
 				ships.add(ship);
 			}
 		}
@@ -282,7 +284,7 @@ public class WorldKnowledge {
 	 * @return	a <code>Ship</code> that is the best candidate for flag carrying 
 	 * 				NOTE: This can return <code>null</code>
 	 */
-	public static Ship getFlagCarrier(Toroidal2DPhysics space, Ship ship) {
+	public Ship getFlagCarrier(Toroidal2DPhysics space, Ship ship) {
 		double shortestDist = Double.MAX_VALUE;
 		double dist = 0.0;
 		Ship candidate = null;
@@ -292,7 +294,7 @@ public class WorldKnowledge {
 			return null;
 		
 		// Check each ship on team
-		for(Ship shipElement : WorldKnowledge.getTeamShips(space)) {
+		for(Ship shipElement : getTeamShips(space)) {
 			if(shipElement.getEnergy() > HEALTHY_ENERGY) { // Find a healthy ship
 				dist = space.findShortestDistance(shipElement.getPosition(), otherTeamFlag.getPosition());
 				// Found potenial candidate
@@ -325,7 +327,7 @@ public class WorldKnowledge {
 			return null;
 		}
 		
-		for(Ship shipElement : WorldKnowledge.getTeamShips(space)) {
+		for(Ship shipElement : getTeamShips(space)) {
 			
 			if(shipElement.getEnergy() > HEALTHY_ENERGY && shipElement.getResources().getTotal() < WorldKnowledge.RESOURCE_THRESHOLD) {
 				dist = Math.min(space.findShortestDistance(shipElement.getPosition(), baseLocations[0]), 

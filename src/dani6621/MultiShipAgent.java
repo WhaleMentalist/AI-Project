@@ -34,6 +34,11 @@ import spacesettlers.utilities.Position;
 public class MultiShipAgent extends TeamClient {
 	
 	/**
+	 * Used to help gather team ships
+	 */
+	public String TEAM_NAME;
+	
+	/**
 	 * Establish when it is good time to start gathering flags...
 	 * This allows agents to gather resources neccessary for base 
 	 * building near alcove for maximum effect
@@ -79,10 +84,11 @@ public class MultiShipAgent extends TeamClient {
 	@Override
 	public Map<UUID, AbstractAction> getMovementStart(Toroidal2DPhysics space,
 			Set<AbstractActionableObject> actionableObjects) {
+        knowledge = new WorldKnowledge(teamKnowledge, TEAM_NAME);
 		
 		if(!INITIALIZED) { // Initialize beginning ships with individual navigators
 			Ship shipToken = null;
-			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
+			for(Ship ship : knowledge.getTeamShips(space)) {
 				teamKnowledge.assignShipToNavigator(ship, new Navigator(DEBUG_MODE));
 				shipToken = ship;
 			}
@@ -91,7 +97,7 @@ public class MultiShipAgent extends TeamClient {
 		}
 		
 		if(BOUGHT_SHIP) { // When ship is bought it must be assigned a navigator
-			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
+			for(Ship ship : knowledge.getTeamShips(space)) {
 				if(!(teamKnowledge.shipAssignedNavigator(ship))) {
 					teamKnowledge.assignShipToNavigator(ship, new Navigator(DEBUG_MODE));
 				}
@@ -154,7 +160,7 @@ public class MultiShipAgent extends TeamClient {
 		if (purchaseCosts.canAfford(PurchaseTypes.SHIP, resourcesAvailable) && 
 				knowledge.isBaseBuiltAtLocation(space, "Padawan_Daniel_and_Flood", teamKnowledge.getConvientBaseBuildingLocations()[0])
 				&& knowledge.isBaseBuiltAtLocation(space, "Padawan_Daniel_and_Flood", teamKnowledge.getConvientBaseBuildingLocations()[1]) 
-				&& WorldKnowledge.getTeamShips(space).size() < 5) {
+				&& knowledge.getTeamShips(space).size() < 5) {
 			for (AbstractActionableObject actionableObject : actionableObjects) {
 				if (actionableObject instanceof Base) {
 					Base base = (Base) actionableObject;
@@ -172,6 +178,8 @@ public class MultiShipAgent extends TeamClient {
 	@Override
 	public void initialize(Toroidal2DPhysics space) {
 		teamKnowledge = new TeamKnowledge();
+		TEAM_NAME = super.getTeamName();
+		System.out.println(TEAM_NAME + " : initialized");
 	}
 
 	@Override
@@ -195,10 +203,9 @@ public class MultiShipAgent extends TeamClient {
      */
     public AbstractAction getShipAction(Toroidal2DPhysics space, Ship ship) {
         AbstractAction newAction = new DoNothingAction();
-        knowledge = new WorldKnowledge(teamKnowledge);
         
         if(teamKnowledge.getFlagCarrierUUID() == null && space.getCurrentTimestep() > FLAG_GATHERING_TIME) { // Need to assign flag carrier
-        	Ship flagCarrier = WorldKnowledge.getFlagCarrier(space, ship);
+        	Ship flagCarrier = knowledge.getFlagCarrier(space, ship);
         	if(flagCarrier != null) {
         		teamKnowledge.assignFlagCarrier(flagCarrier);
         	}
@@ -222,7 +229,7 @@ public class MultiShipAgent extends TeamClient {
         		retrieveFlag(space, ship, knowledge);
         		newAction = teamKnowledge.getTeamMemberAction(space, ship);
         		
-        		if(newAction instanceof DoNothingAction) { // Algorithm couldn't find a suitable flag
+        		if(newAction instanceof DoNothingAction) { // Algorithm couldn't form path to flag
             		transitToLocation(space, ship, knowledge, teamKnowledge.getConvientBaseBuildingLocations()[0]); // Let's just goto position near flag
             		newAction = teamKnowledge.getTeamMemberAction(space, ship);
             	}
