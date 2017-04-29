@@ -24,10 +24,25 @@ import spacesettlers.utilities.Position;
 public class Planner {
 	
 	/**
+	 * Dictates level needed to switch to flag gathering phase
+	 */
+	public static final int WATER_RESOURCE_LEVEL = 1250;
+	
+	/**
+	 * Dictates level needed to switch to flag gathering phase
+	 */
+	public static final int FUEL_RESOURCE_LEVEL = 1900;
+	
+	/**
+	 * Dictates level needed to switch to flag gathering phase
+	 */
+	public static final int METAL_RESOURCE_LEVEL = 1850;
+	
+	/**
 	 * Denotes when planner should soley assign ships to 
 	 * gathering resources
 	 */
-	private static boolean ASTEROID_GATHERING_PHASE = true;
+	private boolean ASTEROID_GATHERING_PHASE = true;
 	
 	/**
 	 * Specifies high level actions that planner can issue...
@@ -94,6 +109,7 @@ public class Planner {
 		}
 		else {
 			// Where we assign flag gathering and base building to optimize flag count
+			shipToActionQueue.get(shipID).clear();
 		}
 		
 		System.out.println("Plan for: " + shipID);
@@ -173,29 +189,32 @@ public class Planner {
 	public void checkCurrentAction(Toroidal2DPhysics space, UUID shipID) {
 		HighLevelAction action = shipToActionQueue.get(shipID).peek();
 		
-		if(action.actionType == ActionEnum.GET_ASTEROID) { // Check for the existance of an asteroid in the simulator
-			UUID asteroidID = action.goalObject;
-			
-			Asteroid asteroid = (Asteroid) space.getObjectById(asteroidID);
-			
-			if(asteroid == null || !(asteroid.isAlive())) { // If asteroid is dead
-				// System.out.println("Asteroid is dead");
-				state.unassignAsteroidToShip(asteroidID); // Make sure to unassign
-				shipToActionQueue.get(shipID).remove(); // Remove the no longer valid action from queue
+		if(action != null) {
+			if(action.actionType == ActionEnum.GET_ASTEROID) { // Check for the existance of an asteroid in the simulator
+				UUID asteroidID = action.goalObject;
+				
+				Asteroid asteroid = (Asteroid) space.getObjectById(asteroidID);
+				
+				if(asteroid == null || !(asteroid.isAlive())) { // If asteroid is dead
+					// System.out.println("Asteroid is dead");
+					state.unassignAsteroidToShip(asteroidID); // Make sure to unassign
+					shipToActionQueue.get(shipID).remove(); // Remove the no longer valid action from queue
+				}
 			}
-		}
-		else if(action.actionType == ActionEnum.RETURN_TO_BASE) { // Use heuristic for ship returned to base
-			Base base = (Base) space.getObjectById(action.goalObject);
-			Ship ship = (Ship) space.getObjectById(shipID);
-			
-			if((ship == null || !(ship.isAlive())) || ship.getResources().getTotal() == 0 && 
-					space.findShortestDistance(ship.getPosition(), base.getPosition()) < StateRepresentation.HIT_BASE_DISTANCE 
-					&& !(ship.isCarryingFlag())) {
-				// System.out.println("Hit base");
-				state.unassignBaseToShip(base.getId());
-				shipToActionQueue.get(shipID).remove();
+			else if(action.actionType == ActionEnum.RETURN_TO_BASE) { // Use heuristic for ship returned to base
+				Base base = (Base) space.getObjectById(action.goalObject);
+				Ship ship = (Ship) space.getObjectById(shipID);
+				
+				if((ship == null || !(ship.isAlive())) || ship.getResources().getTotal() == 0 && 
+						space.findShortestDistance(ship.getPosition(), base.getPosition()) < StateRepresentation.HIT_BASE_DISTANCE 
+						&& !(ship.isCarryingFlag())) {
+					// System.out.println("Hit base");
+					state.unassignBaseToShip(base.getId());
+					shipToActionQueue.get(shipID).remove();
+					formulatePlan(space, shipID);
+				}
+				
 			}
-			
 		}
 	}
 	
@@ -208,6 +227,8 @@ public class Planner {
 	}
 	
 	/**
+	 * Function will undo the affects of ship's action...
+	 * 
 	 * 
 	 * @param space
 	 * @param shipID
@@ -226,6 +247,16 @@ public class Planner {
 			}
 		}
 		emptyShipActionQueue(shipID); // Give new queue that is empty
+	}
+	
+	/**
+	 * Function will set the asteroid gathering phase, which dictates'
+	 * the strategy the planner uses
+	 * 
+	 * @param value	the new value for flag
+	 */
+	public void setAsteroidGatheringPhase(boolean value) {
+		ASTEROID_GATHERING_PHASE = value;
 	}
 	
 	/**

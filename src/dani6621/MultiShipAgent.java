@@ -16,6 +16,7 @@ import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Ship;
 import spacesettlers.objects.powerups.SpaceSettlersPowerupEnum;
 import spacesettlers.objects.resources.ResourcePile;
+import spacesettlers.objects.resources.ResourceTypes;
 import spacesettlers.simulator.Toroidal2DPhysics;
 
 public class MultiShipAgent extends TeamClient {
@@ -45,6 +46,11 @@ public class MultiShipAgent extends TeamClient {
 	 * navigation
 	 */
 	private static boolean INITIALIZED = false;
+	
+	/**
+	 * Flags if the next strategy phase in planner was executed
+	 */
+	private static boolean NEXT_PHASE_ISSUED = false;
 	
 	/**
 	 * Contains domain knowledge of the team
@@ -116,6 +122,16 @@ public class MultiShipAgent extends TeamClient {
 	public Map<UUID, PurchaseTypes> getTeamPurchases(Toroidal2DPhysics space,
 			Set<AbstractActionableObject> actionableObjects, ResourcePile resourcesAvailable,
 			PurchaseCosts purchaseCosts) {
+		
+		// Detect when to switch planner's strategy...
+		if(!(NEXT_PHASE_ISSUED) && resourcesAvailable.getResourceQuantity(ResourceTypes.WATER) >= Planner.WATER_RESOURCE_LEVEL &&
+				resourcesAvailable.getResourceQuantity(ResourceTypes.FUEL) >= Planner.FUEL_RESOURCE_LEVEL &&
+				resourcesAvailable.getResourceQuantity(ResourceTypes.METALS) >= Planner.METAL_RESOURCE_LEVEL &&
+				NEXT_PHASE_ISSUED == false) {
+			System.out.println("Swtiching from asteroid gathering phase...");
+			planner.setAsteroidGatheringPhase(false);
+			NEXT_PHASE_ISSUED = true;
+		}
 
 		return null;
 	}
