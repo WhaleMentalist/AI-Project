@@ -20,20 +20,45 @@ import spacesettlers.simulator.Toroidal2DPhysics;
 
 public class MultiShipAgent extends TeamClient {
 	
+	/**
+	 * Hold the team name in simulation
+	 */
 	public static String TEAM_NAME;
 	
+	/**
+	 * The amount of time before navigation needs to replan
+	 */
 	public static final int NAVIGATION_REPLAN_TIMESTEP = 20;
 	
+	/**
+	 * The amount of time before the multi-agent planner replans
+	 */
 	public static final int REPLAN_MULTIAGENT_ACTIONS = 300;
 	
+	/**
+	 * Flag the debug mode
+	 */
 	public static final boolean DEBUG_MODE = false;
 	
+	/**
+	 * Helps to do first initialization of team member
+	 * navigation
+	 */
 	private static boolean INITIALIZED = false;
 	
+	/**
+	 * Contains domain knowledge of the team
+	 */
 	private StateRepresentation state;
 	
+	/**
+	 * The world state
+	 */
 	private WorldKnowledge worldState;
 	
+	/**
+	 * The planner that directs the ship actions
+	 */
 	private Planner planner;
 
 	@Override
@@ -47,6 +72,11 @@ public class MultiShipAgent extends TeamClient {
 				planner.assignShipToActionQueue(ship.getId());
 			}
 			INITIALIZED = true; // Initialization performed!
+		}
+		
+		// Need to clear planner to do replan...
+		if(space.getCurrentTimestep() % REPLAN_MULTIAGENT_ACTIONS == 0) {
+			planner.clear();
 		}
 		
 		Map<UUID, AbstractAction> actions = new HashMap<UUID, AbstractAction>();
@@ -70,7 +100,7 @@ public class MultiShipAgent extends TeamClient {
 		for (AbstractObject actionable : actionableObjects) { // Find ships and assign each an action to perform
             if (actionable instanceof Ship) {
                 Ship ship = (Ship) actionable;
-                planner.checkCurrentAction(space, ship.getId());
+                planner.checkCurrentAction(space, ship.getId()); // Ensure current action is valid
             }
         }
 	}
@@ -92,10 +122,10 @@ public class MultiShipAgent extends TeamClient {
 
 	@Override
 	public void initialize(Toroidal2DPhysics space) {
-		state = new StateRepresentation();
-		planner = new Planner(state);
+		state = new StateRepresentation(); // Representation that contains important doman knowledge
+		planner = new Planner(state); // Create planner to direct other ships
 		TEAM_NAME = super.getTeamName();
-		System.out.println(TEAM_NAME + " : initialized");
+		System.out.println("Initialized: " + TEAM_NAME);
 		
 	}
 
@@ -121,7 +151,6 @@ public class MultiShipAgent extends TeamClient {
     public AbstractAction getShipAction(Toroidal2DPhysics space, Ship ship) {
     	// Replan the multiagent coordination in planner
     	if(space.getCurrentTimestep() % REPLAN_MULTIAGENT_ACTIONS == 0) {
-    		planner.clear();
     		System.out.println("---------------------------------");
         	planner.formulatePlan(space, ship.getId()); // Create a plan for the ship!
         	System.out.println("---------------------------------");

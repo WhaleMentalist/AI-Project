@@ -24,55 +24,6 @@ import spacesettlers.utilities.Position;
 public class Planner {
 	
 	/**
-	 * Specifies a high level action that contains data 
-	 * members that relay enough to reconstruct action
-	 *
-	 */
-	public class HighLevelAction {
-		
-		/**
-		 * Specifies the action 
-		 */
-		public final ActionEnum actionType;
-		
-		/**
-		 * Specifies the goal object 
-		 * NOTE: This can be <code>null</code>
-		 */
-		public final UUID goalObject;
-		
-		/**
-		 * Specifies the goal position
-		 * NOTE: This can be <code>null</code>
-		 */
-		public final Position goalPosition;
-		
-		/**
-		 * Basic contructor
-		 * 
-		 * @param action
-		 * @param goal
-		 */
-		public HighLevelAction(ActionEnum action, UUID goal) {
-			actionType = action;
-			goalObject = goal;
-			goalPosition = null;
-		}
-		
-		/**
-		 * Basic constructor
-		 * 
-		 * @param action
-		 * @param goal
-		 */
-		public HighLevelAction(ActionEnum action, Position goal) {
-			actionType = action;
-			goalObject = null;
-			goalPosition = goal;
-		}
-	}
-	
-	/**
 	 * Denotes when planner should soley assign ships to 
 	 * gathering resources
 	 */
@@ -117,10 +68,9 @@ public class Planner {
 	 * @param shipID	the UUID of ship
 	 */
 	public void formulatePlan(Toroidal2DPhysics space, UUID shipID) {
-		
-		System.out.println("Plan for: " + shipID);
 		Ship ship = (Ship) space.getObjectById(shipID);
 		state.assignShipToResourceCount(ship.getId(), ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
+		emptyShipActionQueue(shipID);
 		
 		if(ASTEROID_GATHERING_PHASE) { // Get enough asteroids in order to optimize flag gathering
 			Asteroid closestAsteroid;
@@ -138,13 +88,15 @@ public class Planner {
 				}
 			}
 			
-			Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship);
+			Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship); // Get base to return to...
 			shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
 			state.assignBaseToShip(shipID, closestBase.getId());
 		}
 		else {
 			// Where we assign flag gathering and base building to optimize flag count
 		}
+		
+		System.out.println("Plan for: " + shipID);
 		
 		for(HighLevelAction a : shipToActionQueue.get(shipID)) {
 			System.out.println(shipID + " : " + a.actionType + "," + a.goalObject);
@@ -178,10 +130,6 @@ public class Planner {
 				}
 				action = state.getTeamMemberAction(space, ship);
 			}
-		}
-		else { // Replanning is required OR some other action
-			clearShipActions(space, shipID); // Need to make sure to unassign elements of previous plan
-			formulatePlan(space, shipID); // Create a new plan
 		}
 		
 		return action;
@@ -278,5 +226,54 @@ public class Planner {
 			}
 		}
 		emptyShipActionQueue(shipID); // Give new queue that is empty
+	}
+	
+	/**
+	 * Specifies a high level action that contains data 
+	 * members that relay enough to reconstruct action
+	 *
+	 */
+	public class HighLevelAction {
+		
+		/**
+		 * Specifies the action 
+		 */
+		public final ActionEnum actionType;
+		
+		/**
+		 * Specifies the goal object 
+		 * NOTE: This can be <code>null</code>
+		 */
+		public final UUID goalObject;
+		
+		/**
+		 * Specifies the goal position
+		 * NOTE: This can be <code>null</code>
+		 */
+		public final Position goalPosition;
+		
+		/**
+		 * Basic contructor
+		 * 
+		 * @param action
+		 * @param goal
+		 */
+		public HighLevelAction(ActionEnum action, UUID goal) {
+			actionType = action;
+			goalObject = goal;
+			goalPosition = null;
+		}
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param action
+		 * @param goal
+		 */
+		public HighLevelAction(ActionEnum action, Position goal) {
+			actionType = action;
+			goalObject = null;
+			goalPosition = goal;
+		}
 	}
 }
