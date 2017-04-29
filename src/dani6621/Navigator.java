@@ -29,15 +29,10 @@ public class Navigator {
 	private final boolean DEBUG_MODE;
 	
 	/**
-	 * The minimal path needed to pursue object
-	 */
-	private static final int MINIMAL_PATH = 3;
-	
-	/**
 	 * Abstraction of the navigation problem as 
 	 * a graph data structure
 	 */
-	public NavigationMap map;
+	private NavigationMap map;
 	
 	/**
 	 * The path to the objective (i.e goal)
@@ -55,6 +50,12 @@ public class Navigator {
 	 * intercept it.
 	 */
 	private AbstractObject goalObject;
+	
+	/**
+	 * The goal position the search wishes to find path 
+	 * to
+	 */
+	private Position goalPosition;
 	
 	/**
 	 * Exception designed when navigation fails (i.e search fails)
@@ -102,14 +103,19 @@ public class Navigator {
 	 */
 	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, Ship ship) {
 		
-		// If ship is close enough to goal, then simply go straight to goal or if the object has n0 obstacles impeding it
-		if((goalObject != null && space.findShortestDistance(goalObject.getPosition(), 
-				ship.getPosition()) < NavigationMap.SPACING * 2.0 &&
-				path.size() < MINIMAL_PATH) || (goalObject != null && space.
-				isPathClearOfObstructions(ship.getPosition(), goalObject.getPosition(), 
-				WorldKnowledge.getAllObstacles(space, ship), NavigationMap.CLOSE_DISTANCE))) {
+		// If ship has no obstruction to goal go straight to it
+		if((goalObject != null && 
+				space.isPathClearOfObstructions(ship.getPosition(), goalObject.getPosition(), 
+						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE))) {
 			return new MoveAction(space, ship.getPosition(), goalObject.getPosition(),
 					WorldKnowledge.calculateInterceptVelocity(space, ship, goalObject));
+		}
+		
+		// If no goal object check goal position
+		if(goalPosition != null && space.isPathClearOfObstructions(ship.getPosition(), goalPosition, 
+						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE)) {
+			return new MoveAction(space, ship.getPosition(), goalPosition ,
+					WorldKnowledge.calculateVelocity(space, ship, goalPosition));
 		}
 		
 		// Check if the current path is empty or no path formed at all
@@ -131,7 +137,7 @@ public class Navigator {
 			}
 		}
 		else {
-			return new DoNothingAction(); // Can't do anything if search fails
+			return new DoNothingAction();
 		}
 	}
 	
@@ -153,13 +159,14 @@ public class Navigator {
 		goalObject = goal;
 		
 		if(goalObject == null) {
+			System.out.println("Null goal object");
 			throw new NavigationFailureException("Navigation failed! No object was specified!");
 		}
 		
 		GraphSearch graphSearch = new GraphSearch(map, ship, goal.getPosition()); // Give search parameters
 		
 		try {
-			path = graphSearch.aStarSearch(obstacles); // Generate a path
+			path = graphSearch.aStarSearch(space, obstacles); // Generate a path
 		}
 		catch(GraphSearch.SearchFailureException e) {
 			path = new Stack<GraphSearchNode>();
@@ -182,11 +189,12 @@ public class Navigator {
 		currentTargetNode = null;
 		map = new NavigationMap(space, DEBUG_MODE); // Generate graph for problem
 		goalObject = null;
+		goalPosition = goal;
 		
 		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
 		
 		try {
-			path = graphSearch.aStarSearch(obstacles); // Generate a path
+			path = graphSearch.aStarSearch(space, obstacles); // Generate a path
 		}
 		catch(GraphSearch.SearchFailureException e) {
 			path = new Stack<GraphSearchNode>();

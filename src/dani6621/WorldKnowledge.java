@@ -2,12 +2,10 @@ package dani6621;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
 import spacesettlers.objects.Base;
-import spacesettlers.objects.Beacon;
 import spacesettlers.objects.Flag;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
@@ -37,7 +35,7 @@ public class WorldKnowledge {
 	/**
 	 * Threshold for resource capacity
 	 */
-	public static final int RESOURCE_THRESHOLD = 1000;
+	public static final int RESOURCE_THRESHOLD = 800;
 	
 	/**
 	 * Signifies if ship is close enough to location to build a base
@@ -66,11 +64,6 @@ public class WorldKnowledge {
 	public static final double MIN_VELOCITY_MAGNITUDE = 35.0;
     
     /**
-     * Contains information on team members' actions
-     */
-    private TeamKnowledge teamKnowledge;
-    
-    /**
      * Contains the reference to agent
      */
     private final String teamName;
@@ -80,8 +73,7 @@ public class WorldKnowledge {
      * 
      * @param teamInfo	the information about the team
      */
-    public WorldKnowledge(TeamKnowledge teamInfo, String teamNameCopy) {
-    	teamKnowledge = teamInfo;
+    public WorldKnowledge(String teamNameCopy) {
     	teamName = teamNameCopy;
     }
 	
@@ -315,7 +307,7 @@ public class WorldKnowledge {
 	 * 
 	 * @return	the <code>Ship</code> selected for base building...
 	 * 				NOTE: This can return <code>null</code>
-	 */
+	 *//*
 	public Ship getBaseBuilder(Toroidal2DPhysics space, Ship ship) {
 		Ship candidate = null;
 		double shortestDist = Double.MAX_VALUE;
@@ -339,17 +331,18 @@ public class WorldKnowledge {
 			}
 		}
 		return candidate;
-	}
+	}*/
 	
 	/**
-	 * Function returns closest asteroid to passed ship
+	 * Function returns closest asteroid to passed ship. It 
+	 * will ensure that the closest asteroid was never assigned.
 	 * 
 	 * @param space	a reference to space
 	 * @param ship	the ship that will be used as reference
-	 * @oaran failedAsteroids	track the asteroids that had a failed search attempt
-	 * @return	a <code>Asteroid</code> closest to ship
+	 * @param state	team state
+	 * @return	an unassinged <code>Asteroid</code> closest to ship
 	 */
-	public Asteroid getClosestAsteroid(Toroidal2DPhysics space, Ship ship, Set<UUID> failedAsteroids) {
+	public static Asteroid getClosestAsteroid(Toroidal2DPhysics space, Ship ship, StateRepresentation state) {
 		double shortestDist = Double.MAX_VALUE;
 		double dist = 0.0; // Store temporary distance
 		Position shipPos = ship.getPosition();
@@ -357,10 +350,9 @@ public class WorldKnowledge {
 		
 		for(Asteroid asteroid : getMineableAsteroids(space)) {
 			dist = space.findShortestDistance(asteroid.getPosition(), shipPos);
-			if(dist < shortestDist && !(teamKnowledge.isAsteroidAssigned(asteroid)) && !(failedAsteroids.contains(asteroid.getId()))) {
+			if(dist < shortestDist && !(state.isAsteroidAssigned(asteroid.getId()))) {
 				shortestDist = dist;
 				candidate = asteroid;
-				teamKnowledge.assignAsteroidToShip(ship, asteroid);
 			}
 		}
 		return candidate;
@@ -373,7 +365,7 @@ public class WorldKnowledge {
      * @param ship	the ship used as reference
      * @return  <code>Base</code> object closest to ship
      */
-    public Base getClosestFriendlyBase(Toroidal2DPhysics space, Ship ship) {
+    public static Base getClosestFriendlyBase(Toroidal2DPhysics space, Ship ship) {
         double shortestDist = Double.POSITIVE_INFINITY;
         double dist;
         Base candidate = null;
@@ -388,7 +380,7 @@ public class WorldKnowledge {
         return candidate;
     }
     
-    /**
+/*    *//**
      * Function will return closest energy source to ship using a straight path
      * (i.e distance formula). It will consider friendly bases with sufficient
      * energy
@@ -397,7 +389,7 @@ public class WorldKnowledge {
      * @param ship	the ship used as reference
      * @param failedSources	the objects that could not have path formed
      * @return <code>AbstractObject</code> object that is closest to ship
-     */
+     *//*
     public AbstractObject getClosestEnergySource(Toroidal2DPhysics space, Ship ship, Set<UUID> failedSources) {
         double shortestDist = Double.POSITIVE_INFINITY;
         double dist;
@@ -436,7 +428,7 @@ public class WorldKnowledge {
             }
         }
         return candidate;
-    }
+    }*/
     
     /**
      * Function will check if team base is built at the specified location
@@ -476,13 +468,13 @@ public class WorldKnowledge {
     	return result;
     }
     
-    /**
+/*    *//**
      * Function will return the closest base building site
      * 
      * @param space	a reference to space
      * @param ship	the ship that wishes to find base building location
      * @return	a <code>Position</code> representing base building site
-     */
+     *//*
     public Position getClosestBaseBuildingSite(Toroidal2DPhysics space, Ship ship) {
     	double shortestDist = Double.MAX_VALUE;
     	double dist = 0.0;
@@ -500,7 +492,7 @@ public class WorldKnowledge {
     	}
     	
     	return candidate;
-    }
+    }*/
     
     // TODO: Change way ship navigates using functions below!!! Need to experiment with controls... Definately look into overdamp vs underdamp
     

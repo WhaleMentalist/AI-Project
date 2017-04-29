@@ -5,6 +5,7 @@ import java.util.*;
 import dani6621.NavigationMap.NavigationVertex;
 import dani6621.NavigationMap.NavigationVertexKey;
 import spacesettlers.objects.AbstractObject;
+import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
 
 /**
@@ -135,6 +136,11 @@ public class GraphSearch {
 	}
 	
 	/**
+	 * Delimits if goal is within proper range
+	 */
+	private static final double WITHIN_SUFFICIENT_RANGE = NavigationMap.SPACING * 2.0;
+	
+	/**
 	 * Experimental: Trying to find a limit that is NOT too long, 
 	 * but doesn't tie down the capabilities of the AI
 	 */
@@ -183,13 +189,14 @@ public class GraphSearch {
 	 * Function will search for a solution (i.e a path) given the data members. Method is
 	 * a bit large, but for the most part readable! It uses f(n) = g(n) + h(n) as cost.
 	 * 
+	 * @param space	a reference to space
 	 * @param obstacles the obstacles the search should avoid
 	 * @return an <code>AStarNode</code> who can be recursively iterated to 
 	 * 			generate a path
 	 * @throws SearchFailureException any instance where the search fails due to
 	 * 										a multitude of reasons
 	 */
-	public Stack<GraphSearchNode> aStarSearch(Set<AbstractObject> obstacles) throws SearchFailureException {
+	public Stack<GraphSearchNode> aStarSearch(Toroidal2DPhysics space, Set<AbstractObject> obstacles) throws SearchFailureException {
 		Set<GraphSearchNode> closed = new HashSet<GraphSearchNode>(); // Set of explored nodes
 		Map<GraphSearchNode, Integer> costMap = new HashMap<GraphSearchNode, Integer>(); // Access cost in O(1)
 		Queue<GraphSearchNode> open = new PriorityQueue<GraphSearchNode>(new Comparator<GraphSearchNode>() {
@@ -212,7 +219,8 @@ public class GraphSearch {
 		while(!(open.isEmpty()) && searchLimit < MAX_SEARCH_LIMIT) { // Continue until open queue is empty
 			currentNode = open.poll(); // Remove lowest 'fCost' node from queue
 			
-			if(currentNode.equals(goalNode)) 
+			if(currentNode.equals(goalNode) || 
+					space.findShortestDistance(currentNode.node.position, goalNode.node.position) < WITHIN_SUFFICIENT_RANGE) 
 				return generatePath(currentNode); // Recursivly generate path and return it
 			
 			closed.add(currentNode); // Add node to the explored set
