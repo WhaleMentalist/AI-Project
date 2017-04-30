@@ -136,14 +136,26 @@ public class Planner {
 			if(!(ship.isCarryingFlag()) && (shipID.equals(state.getFlagCarrierOneID()) || shipID.equals(state.getFlagCarrierTwoID()))) { // So if we have flag carrier not carrying flag
 				Flag flag = WorldKnowledge.getOtherTeamFlag(space);
 				
-				UUID closestToFlag = closestToFlag(space, state.getFlagCarrierOneID(), state.getFlagCarrierTwoID());
+				int closestToFlag = closestToFlag(space);
 				
-				if(shipID.equals(closestToFlag)) { // It is closest to the flag...
+				if(closestToFlag == 0 && shipID.equals(state.getFlagCarrierOneID())) { // Closer to top spawn position
 					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_FLAG, flag.getId()));
 					
 					Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, flag.getPosition()); // Get base to return to...
 					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
-					state.assignBaseToShip(shipID, closestBase.getId());
+					state.assignBaseToShip(closestBase.getId(), ship.getId());
+				}
+				else if(closestToFlag == 1 && shipID.equals(state.getFlagCarrierTwoID())) { // Closer to bottom spawn
+					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_FLAG, flag.getId()));
+					
+					Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, flag.getPosition()); // Get base to return to...
+					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
+					state.assignBaseToShip(closestBase.getId(), ship.getId());
+				}
+				else if(ship.isCarryingFlag()) {
+					Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
+					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
+					state.assignBaseToShip(closestBase.getId(), ship.getId());
 				}
 				else { // Not closest... We need to have it loiter
 					if(shipID.equals(state.getFlagCarrierOneID())) { // Loiter at top spawn
@@ -157,15 +169,14 @@ public class Planner {
 				}
 				
 			}
+			else if(ship.isCarryingFlag()) {
+				Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
+				shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
+				state.assignBaseToShip(closestBase.getId(), ship.getId());
+			}
 			else if(!(shipID.equals(state.getFlagCarrierOneID()) && !(shipID.equals(state.getFlagCarrierTwoID())))){ // Just do asteroid gathering as usual...
 				asteroidGathering(space, shipID);
 			}
-		}
-		
-		System.out.println("Plan for: " + shipID);
-		
-		for(HighLevelAction a : shipToActionQueue.get(shipID)) {
-			System.out.println(shipID + " : " + a.actionType + "," + a.goalObject);
 		}
 	}
 	
@@ -183,11 +194,20 @@ public class Planner {
 		Position goalPosition;
 		AbstractAction action = new DoNothingAction();
 		
+		if(space.getCurrentTimestep() % 100 == 0) {
+			System.out.println("-----------------------------------------------------");
+			System.out.println("Plan for: " + shipID);
+			for(HighLevelAction a : shipToActionQueue.get(shipID)) {
+				System.out.println(shipID + " : " + a.actionType + "," + a.goalObject);
+			}
+			System.out.println("-----------------------------------------------------");
+		}
+		
 		HighLevelAction highLevelAction = shipToActionQueue.get(shipID).peek();
 		
 		// One of the events that will trigger a contingency plan... Low Energy state...
-		if(highLevelAction == null || ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD 
-				&& !(highLevelAction.actionType == ActionEnum.GET_ENERGY)) {
+		if((highLevelAction == null && ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) || 
+				(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD && !(highLevelAction.actionType == ActionEnum.GET_ENERGY))) {
 			System.out.println("Contingency plan... Need energy... Ship: " + shipID);
 			AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, state);
 			
@@ -205,12 +225,6 @@ public class Planner {
 				}
 				
 				highLevelAction = shipToActionQueue.get(shipID).peek(); // Recheck the top of queue
-			}
-			
-			System.out.println("New Plan for: " + shipID);
-			
-			for(HighLevelAction a : shipToActionQueue.get(shipID)) {
-				System.out.println(shipID + " : " + a.actionType + "," + a.goalObject);
 			}
 		}
 		
@@ -317,11 +331,19 @@ public class Planner {
 					state.unassignBaseToShip(base.getId());
 					shipToActionQueue.get(shipID).remove();
 					
+					// Need to replan
 					if(shipID.equals(state.getFlagCarrierOneID())) {
-						state.unassignFlagCarrierOne();
+						System.out.println("Flag Carrier Return: Replan");
+						replan(space);
+						
 					}
-					
-					formulatePlan(space, shipID);
+					else if(shipID.equals(state.getFlagCarrierTwoID())) { // Again... Replan trigger
+						System.out.println("Flag Carrier Return: Replan");
+						replan(space);
+					}
+					else { // Create plan for just the ship...
+						formulatePlan(space, shipID);
+					}
 				}
 			}
 			else if(action.actionType == ActionEnum.GET_ENERGY) { // Check if energy source is still alive
@@ -408,6 +430,18 @@ public class Planner {
 	}
 	
 	/**
+	 * Function will have planner erase state mutation
+	 * 
+	 * @param space	a reference to space
+	 */
+	public void replan(Toroidal2DPhysics space) {
+		clear();
+		for(UUID id : shipToActionQueue.keySet()) {
+			formulatePlan(space, id);
+		}
+	}
+	
+	/**
 	 * Helper function that will assign ship to a asteroid gathering plan
 	 * 
 	 * @param space	a reference to space
@@ -456,34 +490,26 @@ public class Planner {
 	}
 	
 	/**
+	 * Function returns location that is closest to loiter location for ship
 	 * 
 	 * @param space	a reference to space
-	 * @param shipIDOne
-	 * @param shipIDTwo
-	 * @return
+	 * @return	an <code>int</code> representing the indice choice in convient base location, which
+	 * 				is a loiter point for ships
 	 */
-	private UUID closestToFlag(Toroidal2DPhysics space, UUID shipIDOne, UUID shipIDTwo) {
-		UUID shipID = null;
+	private int closestToFlag(Toroidal2DPhysics space) {
+		Position[] convientBaseLocation = state.getConvientBaseBuildingLocations();
+		Flag flag = WorldKnowledge.getOtherTeamFlag(space);
+		int result;
 		
-		if(shipIDOne != null && shipIDTwo == null) {
-			shipID = shipIDOne;
+		if(space.findShortestDistance(flag.getPosition(), convientBaseLocation[0]) 
+				< space.findShortestDistance(flag.getPosition(), convientBaseLocation[1])) {
+			result = 0;
 		}
-		else if(shipIDOne == null && shipIDTwo != null) {
-			shipID = shipIDTwo;
+		else {
+			result = 1;
 		}
-		else if(shipIDOne != null && shipIDTwo != null) {
-			Ship shipOne = (Ship) space.getObjectById(shipIDOne);
-			Ship shipTwo = (Ship) space.getObjectById(shipIDTwo);
-			
-			if(space.findShortestDistance(shipOne.getPosition(), WorldKnowledge.getOtherTeamFlag(space).getPosition()) <
-					space.findShortestDistance(shipTwo.getPosition(), WorldKnowledge.getOtherTeamFlag(space).getPosition())) {
-				shipID = shipIDOne;
-			}
-			else {
-				shipID = shipIDTwo;
-			}
-		}
-		return shipID;
+		
+		return result;
 	}
 	
 	/**

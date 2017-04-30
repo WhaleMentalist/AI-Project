@@ -329,10 +329,19 @@ public class StateRepresentation {
 	 * @param ship	the ship that needs the action
 	 * @param goal	the goal object the ship desires
 	 * @param obstacles	the obstacles that may impede ship
+	 * @param isLoiter	determines if ship should loiter at end location
 	 * @return	an action that gets ship closer to goal
 	 */
-	public AbstractAction getTeamMemberAction(Toroidal2DPhysics space, Ship ship) {
-		return shipToNavigator.get(ship.getId()).retrieveNavigationAction(space, ship);
+	public AbstractAction getTeamMemberAction(Toroidal2DPhysics space, Ship ship, boolean isLoiter) {
+		AbstractAction action;
+		
+		if(isLoiter) {
+			action = shipToNavigator.get(ship.getId()).retrieveNavigationActionLoiter(space, ship);
+		}
+		else {
+			action = shipToNavigator.get(ship.getId()).retrieveNavigationAction(space, ship);
+		}
+		return action;
 	}
 	
 	/**
@@ -343,8 +352,6 @@ public class StateRepresentation {
 		asteroidToShip.clear();
 		beaconToShip.clear();
 		baseToShip.clear();
-		flagCarrierOneID = null;
-		baseBuilderID = null;
 		
 		// Clear navigator for each ship
 		for(UUID shipID : shipToNavigator.keySet()) {
@@ -393,25 +400,25 @@ public class StateRepresentation {
 		if(flagSpawn.getX() > 1000.0) { // Flag spawned on right side
 			if(flagSpawn.getY() < 500.0) { // Flag spawned top
 				System.out.println("Top-Right");
-				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
-				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() + 550.0);
+				convientBaseLocations[0] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY() + 550.0);
 			}
 			else { // Flag spawned bottom
 				System.out.println("Bottom-Right");
-				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() - 550.0);
-				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
+				convientBaseLocations[0] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY() - 550.0);
+				convientBaseLocations[1] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY());
 			}
 		}
 		else { // Flag spawned on left side
 			if(flagSpawn.getY() < 500.0) { // Flag spawned top
 				System.out.println("Top-Left");
-				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
-				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() + 550.0);
+				convientBaseLocations[0] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY() + 550.0);
 			}
 			else { // Flag spawned bottom
 				System.out.println("Bottom-Left");
-				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() - 550.0);
-				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
+				convientBaseLocations[0] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY() - 550.0);
+				convientBaseLocations[1] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY());
 			}
 		}
 		System.out.println(convientBaseLocations[0].toString() + "     " + convientBaseLocations[1].toString());

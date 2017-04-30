@@ -164,8 +164,8 @@ public class Navigator {
 		// If no goal object check goal position
 		if(goalPosition != null && space.isPathClearOfObstructions(ship.getPosition(), goalPosition, 
 						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE)) {
-			return new MoveAction(space, ship.getPosition(), goalPosition ,
-					WorldKnowledge.calculateVelocity(space, ship, goalPosition));
+			return new MoveAction(space, ship.getPosition(), goalPosition,
+					new Vector2D(0.0, 0.0));
 		}
 		
 		// Check if the current path is empty or no path formed at all

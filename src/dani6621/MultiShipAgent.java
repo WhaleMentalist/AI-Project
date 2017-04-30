@@ -236,9 +236,7 @@ public class MultiShipAgent extends TeamClient {
     public AbstractAction getShipAction(Toroidal2DPhysics space, Ship ship) {
     	// Replan the multiagent coordination in planner... With a set of event triggers...
     	if(space.getCurrentTimestep() % REPLAN_MULTIAGENT_ACTIONS == 0 || REPLAN_TRIGGER) {
-    		System.out.println("---------------------------------");
         	planner.formulatePlan(space, ship.getId()); // Create a plan for the ship!
-        	System.out.println("---------------------------------");
         	REPLAN_TRIGGER = false;
     	}
 		return planner.getShipAction(space, ship.getId());
