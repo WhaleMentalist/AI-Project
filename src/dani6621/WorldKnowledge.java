@@ -101,10 +101,10 @@ public class WorldKnowledge {
 	 * @return	a <code>Flag</code> object belonging to other team
 	 * 			NOTE: It can return <code>null</code>
 	 */
-	public static Flag getOtherTeamFlag(Toroidal2DPhysics space, Ship ship) {
+	public static Flag getOtherTeamFlag(Toroidal2DPhysics space) {
 		Flag otherTeamFlag = null;
 		for(Flag flag : space.getFlags()) {
-			if(!(flag.getTeamName().equalsIgnoreCase(ship.getTeamName()))) {
+			if(!(flag.getTeamName().equalsIgnoreCase(teamName))) {
 				otherTeamFlag = flag;
 			}
 		}
@@ -210,7 +210,7 @@ public class WorldKnowledge {
 	 * @param space	a reference to space
 	 * @return	a <code>Set</code> of all team ships in game
 	 */
-	public Set<Ship> getTeamShips(Toroidal2DPhysics space) {
+	public static Set<Ship> getTeamShips(Toroidal2DPhysics space) {
 		Set<Ship> ships = new HashSet<Ship>();
 		for(Ship ship : space.getShips()) {
 			if(ship.getTeamName().equalsIgnoreCase(teamName)) {
@@ -259,17 +259,17 @@ public class WorldKnowledge {
 	 * @return	a <code>Ship</code> that is the best candidate for flag carrying 
 	 * 				NOTE: This can return <code>null</code>
 	 */
-	public Ship getFlagCarrier(Toroidal2DPhysics space, Ship ship) {
+	public static Ship getFlagCarrier(Toroidal2DPhysics space, Ship ship) {
 		double shortestDist = Double.MAX_VALUE;
 		double dist = 0.0;
 		Ship candidate = null;
-		Flag otherTeamFlag = WorldKnowledge.getOtherTeamFlag(space, ship);
+		Flag otherTeamFlag = WorldKnowledge.getOtherTeamFlag(space);
 		
 		if(otherTeamFlag == null) // No flag so we can't do anything
 			return null;
 		
 		// Check each ship on team
-		for(Ship shipElement : getTeamShips(space)) {
+		for(Ship shipElement : WorldKnowledge.getTeamShips(space)) {
 			if(shipElement.getEnergy() > HEALTHY_ENERGY) { // Find a healthy ship
 				dist = space.findShortestDistance(shipElement.getPosition(), otherTeamFlag.getPosition());
 				// Found potenial candidate
@@ -435,13 +435,12 @@ public class WorldKnowledge {
      * Function will check if team base is built at the specified location
      * 
      * @param space	a reference to space
-     * @param teamName	the team we are comparing
      * @param position	the position we wish to check
      * @return	the result as boolen
-     *//*
-    public boolean isBaseBuiltAtLocation(Toroidal2DPhysics space, String teamName, Position position) {
+     */
+    public static boolean isBaseBuiltAtLocation(Toroidal2DPhysics space, Position position) {
     	boolean result = false;
-    	for(Base base : WorldKnowledge.getTeamBases(space, teamName)) {
+    	for(Base base : WorldKnowledge.getTeamBases(space)) {
     		if(space.findShortestDistance(base.getPosition(), position) < BASE_AT_LOCATION_THRESHOLD) {
     			result = true;
     			break;
@@ -450,31 +449,32 @@ public class WorldKnowledge {
     	return result;
     }
     
-    *//**
+    /**
      * Function will return the closest base building site
      * 
      * @param space	a reference to space
      * @param ship	the ship that wishes to find base building location
+     * @param state	the team information and general domain knowledge
      * @return	a <code>Position</code> representing base building site
-     *//*
-    public Position getClosestBaseBuildingSite(Toroidal2DPhysics space, Ship ship) {
+     */
+    public static Position getClosestBaseBuildingSite(Toroidal2DPhysics space, Ship ship, StateRepresentation state) {
     	double shortestDist = Double.MAX_VALUE;
     	double dist = 0.0;
     	Position candidate = null;
     	
-    	Position[] baseSites = teamKnowledge.getConvientBaseBuildingLocations();
+    	Position[] baseSites = state.getConvientBaseBuildingLocations(); // Retrieve the good base location
     	
     	for(Position pos : baseSites) {
     		dist = space.findShortestDistance(pos, ship.getPosition());
-    		
-    		if(dist < shortestDist && !(isBaseBuiltAtLocation(space, ship, pos))) {
+    		// Find closest one
+    		if(dist < shortestDist && !(isBaseBuiltAtLocation(space, pos))) {
     			shortestDist = dist;
     			candidate = pos;
     		}
     	}
     	
     	return candidate;
-    }*/
+    }
     
     // TODO: Change way ship navigates using functions below!!! Need to experiment with controls... Definately look into overdamp vs underdamp
     

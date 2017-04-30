@@ -73,10 +73,11 @@ public class MultiShipAgent extends TeamClient {
 		worldState = new WorldKnowledge(TEAM_NAME);
 		
 		if(!INITIALIZED) { // Provide navigators to each ship
-			for(Ship ship : worldState.getTeamShips(space)) {
+			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
 				state.assignShipToNavigator(ship.getId(), new Navigator(DEBUG_MODE));
 				planner.assignShipToActionQueue(ship.getId());
 			}
+			state.assignBaseBuildingLocations(space, WorldKnowledge.getOtherTeamFlag(space));
 			INITIALIZED = true; // Initialization performed!
 		}
 		

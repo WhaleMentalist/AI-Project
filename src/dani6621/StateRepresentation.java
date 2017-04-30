@@ -8,11 +8,38 @@ import java.util.UUID;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
+import spacesettlers.objects.Flag;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
 
 public class StateRepresentation {
+	
+	/**
+	 * Number of spawn points flag can be spawned at on other 
+	 * team
+	 */
+	private static final int NUMBER_FLAG_SPAWN = 2;
+	
+	/**
+	 * Top right alcove spot
+	 */
+	private static final Position TOP_RIGHT = new Position(1250, 250);
+	
+	/**
+	 * Bottom right alcove spot
+	 */
+	private static final Position BOTTOM_RIGHT = new Position(1250, 800);
+	
+	/**
+	 * Top left alcove spot
+	 */
+	private static final Position TOP_LEFT = new Position(350, 250);
+	
+	/**
+	 * Bottom left alcove spot
+	 */
+	private static final Position BOTTOM_LEFT = new Position(350, 800);
 	
 	/**
 	 * Detect if ship has reached base
@@ -22,7 +49,7 @@ public class StateRepresentation {
 	/**
 	 * Stores the location of good placement for base
 	 */
-	private Position[] convientBaseLocation;
+	private Position[] convientBaseLocations;
 	
 	/**
 	 * Stores the amount of resources in ship when executing instance
@@ -63,7 +90,7 @@ public class StateRepresentation {
 	private HashMap<UUID, Navigator> shipToNavigator;
 	
 	public StateRepresentation() {
-		convientBaseLocation = new Position[2];
+		convientBaseLocations = new Position[2];
 		shipToResourceCount = new HashMap<UUID, Integer>();
 		asteroidToShip = new HashMap<UUID, UUID>();
 		beaconToShip = new HashMap<UUID, UUID>();
@@ -281,5 +308,79 @@ public class StateRepresentation {
 		for(UUID shipID : shipToNavigator.keySet()) {
 			shipToNavigator.put(shipID, new Navigator(false)); // TODO: Put in way to pass debug setting
 		}
+	}
+	
+	/**
+	 * Function will attempt to use location of flag to discern flag spawn location, which
+	 * then figure out base building locations. This occurs ONLY once in the program (i.e 
+	 * during intialization)
+	 * 
+	 * @param space	a reference to space
+	 * @param flag	the flag object to observe
+	 */
+	public void assignBaseBuildingLocations(Toroidal2DPhysics space, Flag flag) {
+		Position flagPosition = flag.getPosition();
+		Position flagSpawn = null;
+		double shortestDist = Double.MAX_VALUE;
+		double dist;
+		
+		dist = space.findShortestDistance(flagPosition, TOP_RIGHT);
+		if(dist < shortestDist) {
+			flagSpawn = TOP_RIGHT;
+			shortestDist = dist;
+		}
+		
+		dist = space.findShortestDistance(flagPosition, TOP_LEFT);
+		if(dist < shortestDist) {
+			flagSpawn = TOP_LEFT;
+			shortestDist = dist;
+		}
+		
+		dist = space.findShortestDistance(flagPosition, BOTTOM_RIGHT);
+		if(dist < shortestDist) {
+			flagSpawn = BOTTOM_RIGHT;
+			shortestDist = dist;
+		}
+		
+		dist = space.findShortestDistance(flagPosition, BOTTOM_LEFT);
+		if(dist < shortestDist) {
+			flagSpawn = BOTTOM_LEFT;
+			shortestDist = dist;
+		}
+		
+		if(flagSpawn.getX() > 1000.0) { // Flag spawned on right side
+			if(flagSpawn.getY() < 500.0) { // Flag spawned top
+				System.out.println("Top-Right");
+				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() + 550.0);
+			}
+			else { // Flag spawned bottom
+				System.out.println("Bottom-Right");
+				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() - 550.0);
+			}
+		}
+		else { // Flag spawned on left side
+			if(flagSpawn.getY() < 500.0) { // Flag spawned top
+				System.out.println("Top-Left");
+				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() + 550.0);
+			}
+			else { // Flag spawned bottom
+				System.out.println("Bottom-Left");
+				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
+				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() - 550.0);
+			}
+		}
+		System.out.println(convientBaseLocations[0].toString() + "     " + convientBaseLocations[1].toString());
+	}
+	
+	/**
+	 * Function returns the list of convient base locations
+	 * 
+	 * @return	the positions of the base building spots
+	 */
+	public Position[] getConvientBaseBuildingLocations() {
+		return convientBaseLocations;
 	}
 } 
