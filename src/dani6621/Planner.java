@@ -88,21 +88,37 @@ public class Planner {
 		emptyShipActionQueue(shipID);
 		
 		if(ASTEROID_GATHERING_PHASE) { // Get enough asteroids in order to optimize flag gathering
+			if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Need to attain energy as priority in plan
+				AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, state);
+				
+				if(energySource != null) {
+					if(energySource instanceof Base) { // Base Type
+						state.assignBaseToShip(shipID, energySource.getId());
+						shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
+					}
+					else { // Beacon Type
+						state.assignBeaconToShip(shipID, energySource.getId());
+						shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
+					}
+				}
+			}
+			
 			Asteroid closestAsteroid;
 			// Check if ship can get full cargo and also check if there are more asteroids to even assign...
 			while((ship.getResources().getTotal() < WorldKnowledge.RESOURCE_THRESHOLD 
 				&& state.getResourceCount(shipID) < WorldKnowledge.RESOURCE_THRESHOLD) 
 				&& state.getNumberOfAssignedAsteroids() < WorldKnowledge.getMineableAsteroids(space).size()) {
-				closestAsteroid = WorldKnowledge.getClosestAsteroid(space, ship, state);
+				closestAsteroid = WorldKnowledge.getClosestAsteroid(space, ship, state); // Applies preconditions...
 				if(closestAsteroid != null) {
-					state.assignAsteroidToShip(space, shipID, closestAsteroid.getId());
-					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ASTEROID, closestAsteroid.getId())); 
+					state.assignAsteroidToShip(space, shipID, closestAsteroid.getId()); // Applies affect... Mutate state
+					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ASTEROID, closestAsteroid.getId())); // Puts in action... 
 				}
-				else {
+				else { // Could be a lot of ships, but very little amount of asteroids...
 					break; // Means we have run out of asteroids
 				}
 			}
 			
+			// Return to base...
 			Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship); // Get base to return to...
 			shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
 			state.assignBaseToShip(shipID, closestBase.getId());
@@ -120,15 +136,48 @@ public class Planner {
 	}
 	
 	/**
+	 * Function will get the action ship needs to perform in plan...
+	 * It will allow for contingency plans under certain circumstances such 
+	 * as low energy
 	 * 
-	 * @param shipID
+	 * @param shipID	the <code>UUID</code> of the ship
 	 * @return
 	 */
 	public AbstractAction getShipAction(Toroidal2DPhysics space, UUID shipID) {
 		Ship ship = (Ship) space.getObjectById(shipID);
 		AbstractObject goalObject;
 		AbstractAction action = new DoNothingAction();
+		
 		HighLevelAction highLevelAction = shipToActionQueue.get(shipID).peek();
+		
+		// One of the events that will trigger a contingency plan... Low Energy state...
+		if(highLevelAction == null || ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD 
+				&& !(highLevelAction.actionType == ActionEnum.GET_ENERGY)) {
+			System.out.println("Contingency plan... Need energy... Ship: " + shipID);
+			AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, state);
+			
+			if(energySource != null) {
+				if(energySource instanceof Base) { // Base Type
+					state.assignBaseToShip(shipID, energySource.getId());
+					((LinkedList<HighLevelAction>) shipToActionQueue.get(shipID)).
+							addFirst(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
+				}
+				else { // Beacon Type
+					state.assignBeaconToShip(shipID, energySource.getId());
+					state.assignBaseToShip(shipID, energySource.getId());
+					((LinkedList<HighLevelAction>) shipToActionQueue.get(shipID)).
+							addFirst(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
+				}
+				
+				highLevelAction = shipToActionQueue.get(shipID).peek(); // Recheck the top of queue
+			}
+			
+			System.out.println("New Plan for: " + shipID);
+			
+			for(HighLevelAction a : shipToActionQueue.get(shipID)) {
+				System.out.println(shipID + " : " + a.actionType + "," + a.goalObject);
+			}
+		}
 		
 		// Check for 'null'
 		if(highLevelAction != null) {
@@ -143,6 +192,13 @@ public class Planner {
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
 					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship));
+				}
+				action = state.getTeamMemberAction(space, ship);
+			}
+			else if(highLevelAction.actionType == ActionEnum.GET_ENERGY) { // Got to get energy
+				goalObject = space.getObjectById(highLevelAction.goalObject);
+				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
+					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
 				action = state.getTeamMemberAction(space, ship);
 			}
@@ -213,7 +269,25 @@ public class Planner {
 					shipToActionQueue.get(shipID).remove();
 					formulatePlan(space, shipID);
 				}
+			}
+			else if(action.actionType == ActionEnum.GET_ENERGY) { // Check if energy source is still alive
+				AbstractObject energySource = space.getObjectById(action.goalObject);
+				Ship ship = (Ship) space.getObjectById(shipID);
 				
+				if(energySource instanceof Base) { // Base Type
+					if((ship == null || !(ship.isAlive())) || ship.getResources().getTotal() == 0 && 
+							space.findShortestDistance(ship.getPosition(), energySource.getPosition()) < StateRepresentation.HIT_BASE_DISTANCE 
+							&& !(ship.isCarryingFlag())) {
+						state.unassignBaseToShip(energySource.getId());
+						shipToActionQueue.get(shipID).remove();
+					}
+				}
+				else { // Beacon Type
+					if((ship == null || !(ship.isAlive())) || energySource == null || !(energySource.isAlive())) {
+						state.unassignBeaconToShip(energySource.getId());
+						shipToActionQueue.get(shipID).remove();
+					}
+				}
 			}
 		}
 	}

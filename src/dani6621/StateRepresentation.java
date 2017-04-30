@@ -145,47 +145,31 @@ public class StateRepresentation {
 		return asteroidToShip.size();
 	}
 	
-/*	*//**
+	/**
 	 * 
 	 * @param shipID
 	 * @param beaconID
-	 *//*
-	public void assignShipToBeacon(UUID shipID, UUID beaconID) {
-		shipToBeacon.put(shipID, beaconID);
+	 */
+	public void assignBeaconToShip(UUID shipID, UUID beaconID) {
+		beaconToShip.put(shipID, beaconID);
 	}
 	
-	*//**
+	/**
 	 * 
-	 * @param asteroidID
+	 * @param beaconID
 	 * @return
-	 *//*
+	 */
 	public boolean isBeaconAssigned(UUID beaconID) {
-		boolean result = false;
-		for(UUID beacon : shipToBeacon.values()) {
-			if(beaconID.equals(beacon)) {
-				result = true;
-				break;
-			}
-		}
-		return result;
+		return beaconToShip.containsKey(beaconID);
 	}
 	
-	*//**
+	/**
 	 * 
-	 * @param shipID
-	 * @return
-	 *//*
-	public UUID getBeaconAssigned(UUID shipID) {
-		return shipToBeacon.get(shipID);
+	 * @param beaconID
+	 */
+	public void unassignBeaconToShip(UUID beaconID) {
+		beaconToShip.remove(beaconID);
 	}
-	
-	*//**
-	 * 
-	 * @param shipID
-	 *//*
-	public void unassignShipToBeacon(UUID shipID) {
-		shipToBeacon.remove(shipID);
-	}*/
 	
 	/**
 	 * 
@@ -195,6 +179,15 @@ public class StateRepresentation {
 	public void assignBaseToShip(UUID shipID, UUID baseID) {
 		baseToShip.put(baseID, shipID);
 	}
+	
+	/**
+	 * 
+	 * @param baseID
+	 * @return
+	 */
+	public boolean isBaseAssigned(UUID baseID) {
+		return baseToShip.containsKey(baseID);
+	}	
 	
 	/**
 	 * 

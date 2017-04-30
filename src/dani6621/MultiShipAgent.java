@@ -129,7 +129,7 @@ public class MultiShipAgent extends TeamClient {
 				resourcesAvailable.getResourceQuantity(ResourceTypes.METALS) >= Planner.METAL_RESOURCE_LEVEL &&
 				NEXT_PHASE_ISSUED == false) {
 			System.out.println("Swtiching from asteroid gathering phase...");
-			planner.setAsteroidGatheringPhase(false);
+			// planner.setAsteroidGatheringPhase(false);
 			NEXT_PHASE_ISSUED = true;
 		}
 
@@ -165,7 +165,7 @@ public class MultiShipAgent extends TeamClient {
      * @return an action for the ship to perform
      */
     public AbstractAction getShipAction(Toroidal2DPhysics space, Ship ship) {
-    	// Replan the multiagent coordination in planner
+    	// Replan the multiagent coordination in planner... With a set of event triggers...
     	if(space.getCurrentTimestep() % REPLAN_MULTIAGENT_ACTIONS == 0) {
     		System.out.println("---------------------------------");
         	planner.formulatePlan(space, ship.getId()); // Create a plan for the ship!

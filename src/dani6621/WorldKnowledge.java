@@ -66,7 +66,7 @@ public class WorldKnowledge {
     /**
      * Contains the reference to agent
      */
-    private final String teamName;
+    private static String teamName;
     
     /**
      * Basic constructor
@@ -143,27 +143,10 @@ public class WorldKnowledge {
 	 * Function retrieves all team bases
 	 * 
 	 * @param space	a reference to space
-	 * @param ship	the ship that will be used to compare team
-	 * @return	a <code>Set</code> of bases on same team as ship
-	 */
-	public static Set<Base> getTeamBases(Toroidal2DPhysics space, Ship ship) {
-		Set<Base> bases = new HashSet<Base>();
-		for(Base base : space.getBases()) {
-			if(base.getTeam().getTeamName().equalsIgnoreCase((ship.getTeamName()))) {
-				bases.add(base);
-			}
-		}
-		return bases;
-	}
-	
-	/**
-	 * Function retrieves all team bases
-	 * 
-	 * @param space	a reference to space
 	 * @param teamName	the team name that will be used to compare team
 	 * @return	a <code>Set</code> of bases on same team as ship
 	 */
-	public static Set<Base> getTeamBases(Toroidal2DPhysics space, String teamName) {
+	public static Set<Base> getTeamBases(Toroidal2DPhysics space) {
 		Set<Base> bases = new HashSet<Base>();
 		for(Base base : space.getBases()) {
 			if(base.getTeam().getTeamName().equalsIgnoreCase(teamName)) {
@@ -370,7 +353,7 @@ public class WorldKnowledge {
         double dist;
         Base candidate = null;
         Position shipPos = ship.getPosition();
-        for (Base base : getTeamBases(space, ship)) { // Go through team bases
+        for (Base base : getTeamBases(space)) { // Go through team bases
             dist = space.findShortestDistance(shipPos, base.getPosition());
             if (dist < shortestDist) { // Check if the best candidate is beaten
                 shortestDist = dist;
@@ -380,32 +363,30 @@ public class WorldKnowledge {
         return candidate;
     }
     
-/*    *//**
+    
+    
+    /**
      * Function will return closest energy source to ship using a straight path
      * (i.e distance formula). It will consider friendly bases with sufficient
      * energy
      * 
      * @param space	a reference to space
      * @param ship	the ship used as reference
-     * @param failedSources	the objects that could not have path formed
+     * @param state	the team information stored as state
      * @return <code>AbstractObject</code> object that is closest to ship
-     *//*
-    public AbstractObject getClosestEnergySource(Toroidal2DPhysics space, Ship ship, Set<UUID> failedSources) {
+     */
+    public static AbstractObject getClosestEnergySource(Toroidal2DPhysics space, Ship ship, StateRepresentation state) {
         double shortestDist = Double.POSITIVE_INFINITY;
         double dist;
         AbstractObject candidate = null; // The variable will hold beacon that was found
         Position shipPos = ship.getPosition();
-        for (AbstractObject energySource : getEnergySources(space, ship)) {
-        	
-        	if(failedSources.contains(energySource.getId())) // Skip objects that are unapproachable
-        		continue;
-
+        for (AbstractObject energySource : getEnergySources(space)) {
             if(energySource instanceof Base) { // Check if it is base
                 if(((Base) energySource).getEnergy() < SUFFICIENT_ENERGY) { // Check if base has sufficient energy
                     continue; // Skip if base is too low on energy
                 }
             }
-            
+
             dist = space.findShortestDistance(shipPos, energySource.getPosition());
 
             // Otherwise see if it is closer
@@ -413,31 +394,32 @@ public class WorldKnowledge {
                 // Now check what the energy source is...
                 if(energySource instanceof Base)
                 {
-                	// TODO: Add 'isAssign' check here as well
-                	shortestDist = dist; // Reassign shortest distance
-                    candidate = energySource;
-                	teamKnowledge.assignBaseToShip(ship, (Base) energySource); 
+                	if(state.isBaseAssigned(energySource.getId())) {
+                       	shortestDist = dist; // Reassign shortest distance
+                        candidate = energySource;
+                    	state.assignBaseToShip(ship.getId(), energySource.getId()); 
+                	}
                 }
                 else {
-                	if(!(teamKnowledge.isEnergyAssigned(ship, (Beacon) energySource))) {
+                	if(!(state.isBeaconAssigned(energySource.getId()))) {
                 		shortestDist = dist; // Reassign shortest distance
                         candidate = energySource;
-                    	teamKnowledge.assignEnergyToShip(ship, (Beacon) energySource);
+                    	state.assignBeaconToShip(ship.getId(), energySource.getId());
                 	}
                 }
             }
         }
         return candidate;
-    }*/
+    }
     
-    /**
+/*    *//**
      * Function will check if team base is built at the specified location
      * 
      * @param space	a reference to space
      * @param ship	the ship that dicates the team for bases
      * @param position	the position we wish to check
      * @return	the result as boolen
-     */
+     
     public boolean isBaseBuiltAtLocation(Toroidal2DPhysics space, Ship ship, Position position) {
     	boolean result = false;
     	for(Base base : WorldKnowledge.getTeamBases(space, ship)) {
@@ -456,7 +438,7 @@ public class WorldKnowledge {
      * @param teamName	the team we are comparing
      * @param position	the position we wish to check
      * @return	the result as boolen
-     */
+     *//*
     public boolean isBaseBuiltAtLocation(Toroidal2DPhysics space, String teamName, Position position) {
     	boolean result = false;
     	for(Base base : WorldKnowledge.getTeamBases(space, teamName)) {
@@ -468,7 +450,7 @@ public class WorldKnowledge {
     	return result;
     }
     
-/*    *//**
+    *//**
      * Function will return the closest base building site
      * 
      * @param space	a reference to space
@@ -581,9 +563,9 @@ public class WorldKnowledge {
      * @return a <code>Set</code> containing all energy source
      *          objects
      */
-    private Set<AbstractObject> getEnergySources(Toroidal2DPhysics space, Ship ship) {
+    private static Set<AbstractObject> getEnergySources(Toroidal2DPhysics space) {
         Set<AbstractObject> energySources = new HashSet<AbstractObject>();
-        energySources.addAll(getTeamBases(space, ship)); // All team bases are decent energy source
+        energySources.addAll(getTeamBases(space)); // All team bases are decent energy source
         energySources.addAll(space.getBeacons()); // Beacons are also energy sources
         return energySources;
     }
