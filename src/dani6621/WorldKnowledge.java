@@ -67,15 +67,6 @@ public class WorldKnowledge {
      * Contains the reference to agent
      */
     private static String teamName;
-    
-    /**
-     * Basic constructor
-     * 
-     * @param teamInfo	the information about the team
-     */
-    public WorldKnowledge(String teamNameCopy) {
-    	teamName = teamNameCopy;
-    }
 	
 	/**
 	 * Function retrieves all mineable asteroids in the space currently
@@ -270,6 +261,11 @@ public class WorldKnowledge {
 		
 		// Check each ship on team
 		for(Ship shipElement : WorldKnowledge.getTeamShips(space)) {
+			if(shipElement.isCarryingFlag()) { // If anyone happens to be carrying the flag then they will be carrier
+				candidate = shipElement;
+				break; // Skip the formalities we found obvious case
+			}
+			
 			if(shipElement.getEnergy() > HEALTHY_ENERGY) { // Find a healthy ship
 				dist = space.findShortestDistance(shipElement.getPosition(), otherTeamFlag.getPosition());
 				// Found potenial candidate
@@ -283,22 +279,23 @@ public class WorldKnowledge {
 	}
 	
 	/**
-	 * Function will retrieve the ship that will act as the base builder...
+	 * Function will retrieve the ship that will act as the base builder
 	 * 
 	 * @param space	a space reference
 	 * @param ship 	the ship used to establish a team comparison
+	 * @param state	the team information and general domain knowledge
 	 * 
 	 * @return	the <code>Ship</code> selected for base building...
 	 * 				NOTE: This can return <code>null</code>
-	 *//*
-	public Ship getBaseBuilder(Toroidal2DPhysics space, Ship ship) {
+	 */
+	public Ship getBaseBuilder(Toroidal2DPhysics space, Ship ship, StateRepresentation state) {
 		Ship candidate = null;
 		double shortestDist = Double.MAX_VALUE;
 		double dist = 0.0;
-		Position[] baseLocations = teamKnowledge.getConvientBaseBuildingLocations();
+		Position[] baseLocations = state.getConvientBaseBuildingLocations();
 		
 		// Bases already built! We don't need to assign a base builder
-		if(isBaseBuiltAtLocation(space, ship, baseLocations[0]) && isBaseBuiltAtLocation(space, ship, baseLocations[1])) {
+		if(isBaseBuiltAtLocation(space, baseLocations[0]) && isBaseBuiltAtLocation(space, baseLocations[1])) {
 			return null;
 		}
 		
@@ -314,7 +311,7 @@ public class WorldKnowledge {
 			}
 		}
 		return candidate;
-	}*/
+	}
 	
 	/**
 	 * Function returns closest asteroid to passed ship. It 
@@ -464,7 +461,7 @@ public class WorldKnowledge {
     	
     	Position[] baseSites = state.getConvientBaseBuildingLocations(); // Retrieve the good base location
     	
-    	for(Position pos : baseSites) {
+    	for(Position pos : baseSites) { // Iterate through each convient base
     		dist = space.findShortestDistance(pos, ship.getPosition());
     		// Find closest one
     		if(dist < shortestDist && !(isBaseBuiltAtLocation(space, pos))) {
@@ -552,6 +549,16 @@ public class WorldKnowledge {
         }
 
         return finalVelocity;
+    }
+    
+    /**
+     * Function will set the name the knowledge will
+     * use when gathering objects such as ships or bases
+     * 
+     * @param name	the name of the team
+     */
+    public static void setTeamName(String name) {
+    	teamName = name;
     }
     
     /**

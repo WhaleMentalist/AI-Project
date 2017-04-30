@@ -58,11 +58,6 @@ public class MultiShipAgent extends TeamClient {
 	private StateRepresentation state;
 	
 	/**
-	 * The world state
-	 */
-	private WorldKnowledge worldState;
-	
-	/**
 	 * The planner that directs the ship actions
 	 */
 	private Planner planner;
@@ -70,9 +65,9 @@ public class MultiShipAgent extends TeamClient {
 	@Override
 	public Map<UUID, AbstractAction> getMovementStart(Toroidal2DPhysics space,
 			Set<AbstractActionableObject> actionableObjects) {
-		worldState = new WorldKnowledge(TEAM_NAME);
 		
 		if(!INITIALIZED) { // Provide navigators to each ship
+			WorldKnowledge.setTeamName(TEAM_NAME);
 			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
 				state.assignShipToNavigator(ship.getId(), new Navigator(DEBUG_MODE));
 				planner.assignShipToActionQueue(ship.getId());
