@@ -13,6 +13,7 @@ import spacesettlers.clients.TeamClient;
 import spacesettlers.graphics.SpacewarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
+import spacesettlers.objects.Base;
 import spacesettlers.objects.Ship;
 import spacesettlers.objects.powerups.SpaceSettlersPowerupEnum;
 import spacesettlers.objects.resources.ResourcePile;
@@ -53,6 +54,12 @@ public class MultiShipAgent extends TeamClient {
 	private static boolean NEXT_PHASE_ISSUED = false;
 	
 	/**
+	 * Flags whether planner needs to do TOTAL replan based 
+	 * on a trigger occuring (i.e phase change)
+	 */
+	private static boolean REPLAN_TRIGGER = false;
+	
+	/**
 	 * Contains domain knowledge of the team
 	 */
 	private StateRepresentation state;
@@ -77,8 +84,9 @@ public class MultiShipAgent extends TeamClient {
 		}
 		
 		// Need to clear planner to do replan...
-		if(space.getCurrentTimestep() % REPLAN_MULTIAGENT_ACTIONS == 0) {
+		if(space.getCurrentTimestep() % REPLAN_MULTIAGENT_ACTIONS == 0 || REPLAN_TRIGGER) {
 			planner.clear();
+			REPLAN_TRIGGER = false;
 		}
 		
 		Map<UUID, AbstractAction> actions = new HashMap<UUID, AbstractAction>();
@@ -110,26 +118,55 @@ public class MultiShipAgent extends TeamClient {
 	@Override
 	public Map<UUID, SpaceSettlersPowerupEnum> getPowerups(Toroidal2DPhysics space,
 			Set<AbstractActionableObject> actionableObjects) {
+		HashMap<UUID, SpaceSettlersPowerupEnum> powerUps = new HashMap<UUID, SpaceSettlersPowerupEnum>();
+		Base base;
+		for (AbstractObject actionable :  actionableObjects) {
+			if (actionable instanceof Base) {
+				base = (Base) actionable;
 
-		return null;
+				// Check for 'Double Base Healing Speed' powerup
+				if (base.isValidPowerup(SpaceSettlersPowerupEnum.DOUBLE_BASE_HEALING_SPEED)) {
+					System.out.println("Base using 'Double Base Healing Speed' powerup...");
+					powerUps.put(base.getId(), SpaceSettlersPowerupEnum.DOUBLE_BASE_HEALING_SPEED);
+				}
+
+			}
+		}
+		return powerUps;
 	}
 
 	@Override
 	public Map<UUID, PurchaseTypes> getTeamPurchases(Toroidal2DPhysics space,
 			Set<AbstractActionableObject> actionableObjects, ResourcePile resourcesAvailable,
 			PurchaseCosts purchaseCosts) {
+		HashMap<UUID, PurchaseTypes> purchases = new HashMap<UUID, PurchaseTypes>();
 		
 		// Detect when to switch planner's strategy...
 		if(!(NEXT_PHASE_ISSUED) && resourcesAvailable.getResourceQuantity(ResourceTypes.WATER) >= Planner.WATER_RESOURCE_LEVEL &&
 				resourcesAvailable.getResourceQuantity(ResourceTypes.FUEL) >= Planner.FUEL_RESOURCE_LEVEL &&
 				resourcesAvailable.getResourceQuantity(ResourceTypes.METALS) >= Planner.METAL_RESOURCE_LEVEL &&
 				NEXT_PHASE_ISSUED == false) {
-			System.out.println("Swtiching from asteroid gathering phase...");
-			// planner.setAsteroidGatheringPhase(false);
+			System.out.println("Swtiching to flag gathering phase...");
+			planner.setAsteroidGatheringPhase(false);
+			REPLAN_TRIGGER = true;
 			NEXT_PHASE_ISSUED = true;
 		}
+		
+		/*
+		if (purchaseCosts.canAfford(PurchaseTypes.POWERUP_DOUBLE_BASE_HEALING_SPEED, resourcesAvailable)) {
+			for (AbstractActionableObject actionableObject : actionableObjects) {
+				if (actionableObject instanceof Base) {
+					Base base = (Base) actionableObject;
+					purchases.put(base.getId(), PurchaseTypes.POWERUP_DOUBLE_BASE_HEALING_SPEED);
+					System.out.println("Base buying double healing powerup...");
+					break;
+				}
 
-		return null;
+			}
+		}
+		*/
+		
+		return purchases;
 	}
 
 	@Override
@@ -162,10 +199,11 @@ public class MultiShipAgent extends TeamClient {
      */
     public AbstractAction getShipAction(Toroidal2DPhysics space, Ship ship) {
     	// Replan the multiagent coordination in planner... With a set of event triggers...
-    	if(space.getCurrentTimestep() % REPLAN_MULTIAGENT_ACTIONS == 0) {
+    	if(space.getCurrentTimestep() % REPLAN_MULTIAGENT_ACTIONS == 0 || REPLAN_TRIGGER) {
     		System.out.println("---------------------------------");
         	planner.formulatePlan(space, ship.getId()); // Create a plan for the ship!
         	System.out.println("---------------------------------");
+        	REPLAN_TRIGGER = false;
     	}
 		return planner.getShipAction(space, ship.getId());
     }

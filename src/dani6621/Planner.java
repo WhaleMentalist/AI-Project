@@ -11,6 +11,7 @@ import spacesettlers.actions.DoNothingAction;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
 import spacesettlers.objects.Base;
+import spacesettlers.objects.Flag;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
@@ -52,7 +53,7 @@ public class Planner {
 	 */
 	public enum ActionEnum {
 		GET_FLAG, RETURN_TO_BASE, GET_ASTEROID,
-		BUILD_BASE, BUY_SHIP, GET_ENERGY;
+		GET_ENERGY, GO_TO_LOCATION;
 	}
 
 	/**
@@ -83,11 +84,31 @@ public class Planner {
 	 * @param shipID	the UUID of ship
 	 */
 	public void formulatePlan(Toroidal2DPhysics space, UUID shipID) {
-		Ship ship = (Ship) space.getObjectById(shipID);
-		state.assignShipToResourceCount(ship.getId(), ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
-		emptyShipActionQueue(shipID);
 		
 		if(ASTEROID_GATHERING_PHASE) { // Get enough asteroids in order to optimize flag gathering
+			asteroidGathering(space, shipID);
+		}
+		else {
+			// Where we assign flag gathering and base building to optimize flag count
+			if(state.getFlagCarrierOneID() == null) { // Need to give state flag carrier ID
+				Ship ship = WorldKnowledge.getFlagCarrier(space, state);
+				
+				if(ship != null) { // Check if a ship was found, otherwise just skip until next timestep and check again
+					state.assignFlagCarrierOneID(ship.getId());
+				}
+			}
+			
+			/* It may not be neccessary the flag carrier in close proximity to convient base
+			if(state.getBaseBuilderID() == null) { // Need to give state base builder ID
+				state.assignBaseBuilder(WorldKnowledge.getBaseBuilder(space, state).getId());
+			}
+			*/
+			
+			Ship ship = (Ship) space.getObjectById(shipID);
+			state.assignShipToResourceCount(ship.getId(), ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
+			emptyShipActionQueue(shipID);
+			
+			// Low energy state...
 			if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Need to attain energy as priority in plan
 				AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, state);
 				
@@ -103,29 +124,19 @@ public class Planner {
 				}
 			}
 			
-			Asteroid closestAsteroid;
-			// Check if ship can get full cargo and also check if there are more asteroids to even assign...
-			while((ship.getResources().getTotal() < WorldKnowledge.RESOURCE_THRESHOLD 
-				&& state.getResourceCount(shipID) < WorldKnowledge.RESOURCE_THRESHOLD) 
-				&& state.getNumberOfAssignedAsteroids() < WorldKnowledge.getMineableAsteroids(space).size()) {
-				closestAsteroid = WorldKnowledge.getClosestAsteroid(space, ship, state); // Applies preconditions...
-				if(closestAsteroid != null) {
-					state.assignAsteroidToShip(space, shipID, closestAsteroid.getId()); // Applies affect... Mutate state
-					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ASTEROID, closestAsteroid.getId())); // Puts in action... 
-				}
-				else { // Could be a lot of ships, but very little amount of asteroids...
-					break; // Means we have run out of asteroids
-				}
-			}
+			// Need to assign a location to sit while waiting for flag spawn
 			
-			// Return to base...
-			Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship); // Get base to return to...
-			shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
-			state.assignBaseToShip(shipID, closestBase.getId());
-		}
-		else {
-			// Where we assign flag gathering and base building to optimize flag count
-			shipToActionQueue.get(shipID).clear();
+			if(!(ship.isCarryingFlag()) && shipID.equals(state.getFlagCarrierOneID())) { // So if we have flag carrier not carrying flag
+				Flag flag = WorldKnowledge.getOtherTeamFlag(space);
+				shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_FLAG, flag.getId()));
+				
+				Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, flag.getPosition()); // Get base to return to...
+				shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
+				state.assignBaseToShip(shipID, closestBase.getId());
+			}
+			else { // Just do asteroid gathering as usual...
+				asteroidGathering(space, shipID);
+			}
 		}
 		
 		System.out.println("Plan for: " + shipID);
@@ -202,6 +213,13 @@ public class Planner {
 				}
 				action = state.getTeamMemberAction(space, ship);
 			}
+			else if(highLevelAction.actionType == ActionEnum.GET_FLAG) { // Getting a flag
+				goalObject = space.getObjectById(highLevelAction.goalObject);
+				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
+					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
+				}
+				action = state.getTeamMemberAction(space, ship);
+			}
 		}
 		
 		return action;
@@ -267,6 +285,11 @@ public class Planner {
 					// System.out.println("Hit base");
 					state.unassignBaseToShip(base.getId());
 					shipToActionQueue.get(shipID).remove();
+					
+					if(shipID.equals(state.getFlagCarrierOneID())) {
+						state.unassignFlagCarrierOne();
+					}
+					
 					formulatePlan(space, shipID);
 				}
 			}
@@ -287,6 +310,13 @@ public class Planner {
 						state.unassignBeaconToShip(energySource.getId());
 						shipToActionQueue.get(shipID).remove();
 					}
+				}
+			}
+			else if(action.actionType == ActionEnum.GET_FLAG) {
+				Ship ship = (Ship) space.getObjectById(shipID);
+				
+				if(ship.isCarryingFlag()) {
+					shipToActionQueue.get(shipID).remove();
 				}
 			}
 		}
@@ -318,6 +348,19 @@ public class Planner {
 					Base base = (Base) space.getObjectById(action.goalObject);
 					state.unassignBaseToShip(base.getId());
 				}
+				else if(action.actionType == ActionEnum.GET_ENERGY) {
+					AbstractObject energySource = space.getObjectById(action.goalObject);
+					
+					if(energySource instanceof Base) {
+						state.unassignBaseToShip(energySource.getId());
+					}
+					else {
+						state.unassignBeaconToShip(energySource.getId());
+					}
+				}
+				else if(action.actionType == ActionEnum.GET_FLAG) {
+					state.unassignFlagCarrierOne();
+				}
 			}
 		}
 		emptyShipActionQueue(shipID); // Give new queue that is empty
@@ -331,6 +374,54 @@ public class Planner {
 	 */
 	public void setAsteroidGatheringPhase(boolean value) {
 		ASTEROID_GATHERING_PHASE = value;
+	}
+	
+	/**
+	 * Helper function that will assign ship to a asteroid gathering plan
+	 * 
+	 * @param space	a reference to space
+	 * @param shipID	ID of ship that will be assigned plan
+	 */
+	private void asteroidGathering(Toroidal2DPhysics space, UUID shipID) {
+		Ship ship = (Ship) space.getObjectById(shipID);
+		state.assignShipToResourceCount(ship.getId(), ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
+		emptyShipActionQueue(shipID);
+		
+		if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Need to attain energy as priority in plan
+			AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, state);
+			
+			if(energySource != null) {
+				if(energySource instanceof Base) { // Base Type
+					state.assignBaseToShip(shipID, energySource.getId());
+					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
+				}
+				else { // Beacon Type
+					state.assignBeaconToShip(shipID, energySource.getId());
+					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
+				}
+			}
+		}
+		
+		Asteroid closestAsteroid;
+		// Check if ship can get full cargo and also check if there are more asteroids to even assign...
+		while((ship.getResources().getTotal() < WorldKnowledge.RESOURCE_THRESHOLD 
+			&& state.getResourceCount(shipID) < WorldKnowledge.RESOURCE_THRESHOLD) 
+			&& state.getNumberOfAssignedAsteroids() < WorldKnowledge.getMineableAsteroids(space).size()) {
+			closestAsteroid = WorldKnowledge.getClosestAsteroid(space, ship, state); // Applies preconditions...
+			if(closestAsteroid != null) {
+				state.assignAsteroidToShip(space, shipID, closestAsteroid.getId()); // Applies affect... Mutate state
+				shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ASTEROID, closestAsteroid.getId())); // Puts in action... 
+			}
+			else { // Could be a lot of ships, but very little amount of asteroids...
+				break; // Means we have run out of asteroids
+			}
+		}
+		// TODO: Adjust for the fact that ship won't be at initial location...
+		
+		// Return to base...
+		Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition()); // Get base to return to...
+		shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
+		state.assignBaseToShip(shipID, closestBase.getId());
 	}
 	
 	/**

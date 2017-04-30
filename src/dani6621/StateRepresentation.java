@@ -16,12 +16,6 @@ import spacesettlers.utilities.Position;
 public class StateRepresentation {
 	
 	/**
-	 * Number of spawn points flag can be spawned at on other 
-	 * team
-	 */
-	private static final int NUMBER_FLAG_SPAWN = 2;
-	
-	/**
 	 * Top right alcove spot
 	 */
 	private static final Position TOP_RIGHT = new Position(1250, 250);
@@ -75,9 +69,14 @@ public class StateRepresentation {
 	private Map<UUID, UUID> baseToShip;
 	
 	/**
-	 * Store the ID for the flag carrier
+	 * Store the ID for the first flag carrier
 	 */
-	private UUID flagCarrierID;
+	private UUID flagCarrierOneID;
+	
+	/**
+	 * Store the ID for the second flag carrier
+	 */
+	private UUID flagCarrierTwoID;
 	
 	/**
 	 * Store the ID of base builder
@@ -89,13 +88,18 @@ public class StateRepresentation {
 	 */
 	private HashMap<UUID, Navigator> shipToNavigator;
 	
+	/**
+	 * Initialize the state representation with empty
+	 * values
+	 */
 	public StateRepresentation() {
 		convientBaseLocations = new Position[2];
 		shipToResourceCount = new HashMap<UUID, Integer>();
 		asteroidToShip = new HashMap<UUID, UUID>();
 		beaconToShip = new HashMap<UUID, UUID>();
 		baseToShip = new HashMap<UUID, UUID>();
-		flagCarrierID = null;
+		flagCarrierOneID = null;
+		flagCarrierTwoID = null;
 		baseBuilderID = null;
 		shipToNavigator = new HashMap<UUID, Navigator>();
 	}
@@ -228,16 +232,54 @@ public class StateRepresentation {
 	 * 
 	 * @param shipID
 	 */
-	public void assignFlagCarrierID(UUID shipID) {
-		flagCarrierID = shipID;
+	public void assignFlagCarrierOneID(UUID shipID) {
+		flagCarrierOneID = shipID;
 	}
 	
 	/**
 	 * 
 	 * @return
 	 */
-	public UUID getFlagCarrierID() {
-		return flagCarrierID;
+	public UUID getFlagCarrierOneID() {
+		return flagCarrierOneID;
+	}
+	
+	/**
+	 * 
+	 */
+	public void unassignFlagCarrierOne() {
+		flagCarrierOneID =  null;
+	}
+	
+	/**
+	 * 
+	 * @param shipID
+	 */
+	public void assignFlagCarrierTwo(UUID shipID) {
+		flagCarrierTwoID = shipID;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public UUID getFlagCarrierTwoID() {
+		return flagCarrierTwoID;
+	}
+	
+	/**
+	 * 
+	 */
+	public void unassignFlagCarrierTwo() {
+		flagCarrierTwoID = null;
+	}
+	
+	/**
+	 * 
+	 * @param shipID
+	 */
+	public void assignBaseBuilder(UUID shipID) {
+		baseBuilderID = shipID;
 	}
 	
 	/**
@@ -301,7 +343,7 @@ public class StateRepresentation {
 		asteroidToShip.clear();
 		beaconToShip.clear();
 		baseToShip.clear();
-		flagCarrierID = null;
+		flagCarrierOneID = null;
 		baseBuilderID = null;
 		
 		// Clear navigator for each ship
@@ -356,8 +398,8 @@ public class StateRepresentation {
 			}
 			else { // Flag spawned bottom
 				System.out.println("Bottom-Right");
-				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
-				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() - 550.0);
+				convientBaseLocations[0] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY() - 550.0);
+				convientBaseLocations[1] = new Position(flagSpawn.getX() + 200.0, flagSpawn.getY());
 			}
 		}
 		else { // Flag spawned on left side
@@ -368,8 +410,8 @@ public class StateRepresentation {
 			}
 			else { // Flag spawned bottom
 				System.out.println("Bottom-Left");
-				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
-				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() - 550.0);
+				convientBaseLocations[0] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY() - 550.0);
+				convientBaseLocations[1] = new Position(flagSpawn.getX() - 200.0, flagSpawn.getY());
 			}
 		}
 		System.out.println(convientBaseLocations[0].toString() + "     " + convientBaseLocations[1].toString());
@@ -382,5 +424,45 @@ public class StateRepresentation {
 	 */
 	public Position[] getConvientBaseBuildingLocations() {
 		return convientBaseLocations;
+	}
+	
+	/**
+	 * Function will return index in convient base location that 
+	 * flag spawn is closest to
+	 * 
+	 * @param space	a reference to space
+	 * @return
+	 */
+	public int flagSpawnLocation(Toroidal2DPhysics space) {
+		Position flagPosition = WorldKnowledge.getOtherTeamFlag(space).getPosition();
+		int flagSpawn = -1;
+		double shortestDist = Double.MAX_VALUE;
+		double dist;
+		
+		dist = space.findShortestDistance(flagPosition, TOP_RIGHT);
+		if(dist < shortestDist) {
+			flagSpawn = 0;
+			shortestDist = dist;
+		}
+		
+		dist = space.findShortestDistance(flagPosition, TOP_LEFT);
+		if(dist < shortestDist) {
+			flagSpawn = 0;
+			shortestDist = dist;
+		}
+		
+		dist = space.findShortestDistance(flagPosition, BOTTOM_RIGHT);
+		if(dist < shortestDist) {
+			flagSpawn = 1;
+			shortestDist = dist;
+		}
+		
+		dist = space.findShortestDistance(flagPosition, BOTTOM_LEFT);
+		if(dist < shortestDist) {
+			flagSpawn = 1;
+			shortestDist = dist;
+		}
+		
+		return flagSpawn;
 	}
 } 

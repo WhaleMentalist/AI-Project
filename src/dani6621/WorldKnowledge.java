@@ -30,7 +30,7 @@ public class WorldKnowledge {
 	/**
 	 * Used as threshold for ship considering base as energy source
 	 */
-	public static final double SUFFICIENT_ENERGY = 1000;
+	public static final double SUFFICIENT_ENERGY = 1600;
 	
 	/**
 	 * Threshold for resource capacity
@@ -246,18 +246,19 @@ public class WorldKnowledge {
 	 * its distance to flag
 	 * 
 	 * @param space	a reference to space
-	 * @param ship	the ship that wants to find other team flag
+	 * @param state	the team information and domain knowledge
 	 * @return	a <code>Ship</code> that is the best candidate for flag carrying 
 	 * 				NOTE: This can return <code>null</code>
 	 */
-	public static Ship getFlagCarrier(Toroidal2DPhysics space, Ship ship) {
+	public static Ship getFlagCarrier(Toroidal2DPhysics space, StateRepresentation state) {
 		double shortestDist = Double.MAX_VALUE;
 		double dist = 0.0;
 		Ship candidate = null;
 		Flag otherTeamFlag = WorldKnowledge.getOtherTeamFlag(space);
 		
-		if(otherTeamFlag == null) // No flag so we can't do anything
+		if(otherTeamFlag == null) {// No flag so we can't do anything
 			return null;
+		}
 		
 		// Check each ship on team
 		for(Ship shipElement : WorldKnowledge.getTeamShips(space)) {
@@ -266,7 +267,8 @@ public class WorldKnowledge {
 				break; // Skip the formalities we found obvious case
 			}
 			
-			if(shipElement.getEnergy() > HEALTHY_ENERGY) { // Find a healthy ship
+			// Make sure flag carrier isn't being assigned twice
+			if(!(shipElement.getId().equals(state.getFlagCarrierOneID()))) {
 				dist = space.findShortestDistance(shipElement.getPosition(), otherTeamFlag.getPosition());
 				// Found potenial candidate
 				if(dist < shortestDist) {
@@ -282,13 +284,12 @@ public class WorldKnowledge {
 	 * Function will retrieve the ship that will act as the base builder
 	 * 
 	 * @param space	a space reference
-	 * @param ship 	the ship used to establish a team comparison
 	 * @param state	the team information and general domain knowledge
 	 * 
 	 * @return	the <code>Ship</code> selected for base building...
 	 * 				NOTE: This can return <code>null</code>
 	 */
-	public Ship getBaseBuilder(Toroidal2DPhysics space, Ship ship, StateRepresentation state) {
+	public static Ship getBaseBuilder(Toroidal2DPhysics space, StateRepresentation state) {
 		Ship candidate = null;
 		double shortestDist = Double.MAX_VALUE;
 		double dist = 0.0;
@@ -342,14 +343,13 @@ public class WorldKnowledge {
      * Function will retrieve the closest team base to ship
      *
      * @param space	a reference to space
-     * @param ship	the ship used as reference
+     * @param shipPos	the position of the ship
      * @return  <code>Base</code> object closest to ship
      */
-    public static Base getClosestFriendlyBase(Toroidal2DPhysics space, Ship ship) {
+    public static Base getClosestFriendlyBase(Toroidal2DPhysics space, Position shipPos) {
         double shortestDist = Double.POSITIVE_INFINITY;
         double dist;
         Base candidate = null;
-        Position shipPos = ship.getPosition();
         for (Base base : getTeamBases(space)) { // Go through team bases
             dist = space.findShortestDistance(shipPos, base.getPosition());
             if (dist < shortestDist) { // Check if the best candidate is beaten
@@ -378,6 +378,7 @@ public class WorldKnowledge {
         AbstractObject candidate = null; // The variable will hold beacon that was found
         Position shipPos = ship.getPosition();
         for (AbstractObject energySource : getEnergySources(space)) {
+        	
             if(energySource instanceof Base) { // Check if it is base
                 if(((Base) energySource).getEnergy() < SUFFICIENT_ENERGY) { // Check if base has sufficient energy
                     continue; // Skip if base is too low on energy
@@ -391,17 +392,17 @@ public class WorldKnowledge {
                 // Now check what the energy source is...
                 if(energySource instanceof Base)
                 {
-                	if(state.isBaseAssigned(energySource.getId())) {
+                	if(!(state.isBaseAssigned(energySource.getId()))) {
                        	shortestDist = dist; // Reassign shortest distance
                         candidate = energySource;
-                    	state.assignBaseToShip(ship.getId(), energySource.getId()); 
+                    	state.assignBaseToShip(energySource.getId(), ship.getId()); 
                 	}
                 }
                 else {
                 	if(!(state.isBeaconAssigned(energySource.getId()))) {
                 		shortestDist = dist; // Reassign shortest distance
                         candidate = energySource;
-                    	state.assignBeaconToShip(ship.getId(), energySource.getId());
+                    	state.assignBeaconToShip(energySource.getId(), ship.getId());
                 	}
                 }
             }
