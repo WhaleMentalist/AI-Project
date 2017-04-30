@@ -13,6 +13,7 @@ import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
+import spacesettlers.utilities.Vector2D;
 
 /**
  * The class is designed to guide the agent along a path that
@@ -109,6 +110,55 @@ public class Navigator {
 						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE))) {
 			return new MoveAction(space, ship.getPosition(), goalObject.getPosition(),
 					WorldKnowledge.calculateInterceptVelocity(space, ship, goalObject));
+		}
+		
+		// If no goal object check goal position
+		if(goalPosition != null && space.isPathClearOfObstructions(ship.getPosition(), goalPosition, 
+						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE)) {
+			return new MoveAction(space, ship.getPosition(), goalPosition ,
+					WorldKnowledge.calculateVelocity(space, ship, goalPosition));
+		}
+		
+		// Check if the current path is empty or no path formed at all
+		if(path != null && !(path.isEmpty())) {
+			
+			if(currentTargetNode == null) { // Assign a new node
+				currentTargetNode = path.pop();
+				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
+						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
+			}
+			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 2)) {
+				currentTargetNode = path.pop();
+				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
+						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
+			}
+			else {
+				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
+						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
+			}
+		}
+		else {
+			return new DoNothingAction();
+		}
+	}
+	
+	/**
+	 * Function will return a <code>AbstractAction</code> that allows the agent 
+	 * to follow the path. It will continue to 'pop' the stack until empty. It 
+	 * will end up with the ship staying at a point...
+	 * 
+	 * @param space the reference to game space used for utility functions
+	 * @param ship the ship that is transversing the path
+	 * @return an action the ship will take to follow the path stored
+	 */
+	public AbstractAction retrieveNavigationActionLoiter(Toroidal2DPhysics space, Ship ship) {
+		
+		// If ship has no obstruction to goal go straight to it
+		if((goalObject != null && 
+				space.isPathClearOfObstructions(ship.getPosition(), goalObject.getPosition(), 
+						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE))) {
+			return new MoveAction(space, ship.getPosition(), goalObject.getPosition(),
+					new Vector2D(0.0, 0.0));
 		}
 		
 		// If no goal object check goal position

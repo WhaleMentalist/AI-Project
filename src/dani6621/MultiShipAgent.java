@@ -19,6 +19,7 @@ import spacesettlers.objects.powerups.SpaceSettlersPowerupEnum;
 import spacesettlers.objects.resources.ResourcePile;
 import spacesettlers.objects.resources.ResourceTypes;
 import spacesettlers.simulator.Toroidal2DPhysics;
+import spacesettlers.utilities.Position;
 
 public class MultiShipAgent extends TeamClient {
 	
@@ -151,6 +152,41 @@ public class MultiShipAgent extends TeamClient {
 			REPLAN_TRIGGER = true;
 			NEXT_PHASE_ISSUED = true;
 		}
+		
+		Ship ship;
+		
+		// We can afford a base to purchase!
+		if (purchaseCosts.canAfford(PurchaseTypes.BASE, resourcesAvailable)) {
+			for (AbstractActionableObject actionableObject : actionableObjects) {
+				if(actionableObject instanceof Ship) {
+					ship = (Ship) actionableObject;
+					Position closestBaseSite = WorldKnowledge.getClosestBaseBuildingSite(space, ship, state);
+					if(closestBaseSite != null && space.findShortestDistance(ship.getPosition(), closestBaseSite) 
+							< WorldKnowledge.BASE_BUILD_THRESHOLD) {
+						purchases.put(ship.getId(), PurchaseTypes.BASE);
+						System.out.println("Buying base");
+					}
+				}
+			}
+		}
+		
+		/*
+		// We can start buying ships after we have established convient bases
+		if (purchaseCosts.canAfford(PurchaseTypes.SHIP, resourcesAvailable) && 
+				WorldKnowledge.isBaseBuiltAtLocation(space, state.getConvientBaseBuildingLocations()[0])
+				&& WorldKnowledge.isBaseBuiltAtLocation(space, state.getConvientBaseBuildingLocations()[1]) 
+				&& WorldKnowledge.getTeamShips(space).size() < 5) {
+			for (AbstractActionableObject actionableObject : actionableObjects) {
+				if (actionableObject instanceof Base) {
+					Base base = (Base) actionableObject;
+					purchases.put(base.getId(), PurchaseTypes.SHIP);
+					BOUGHT_SHIP = true;
+					System.out.println("Buying ship!");
+					break;
+				}
+			}
+		}
+		*/
 		
 		/*
 		if (purchaseCosts.canAfford(PurchaseTypes.POWERUP_DOUBLE_BASE_HEALING_SPEED, resourcesAvailable)) {

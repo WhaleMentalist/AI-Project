@@ -53,7 +53,7 @@ public class Planner {
 	 */
 	public enum ActionEnum {
 		GET_FLAG, RETURN_TO_BASE, GET_ASTEROID,
-		GET_ENERGY, GO_TO_LOCATION;
+		GET_ENERGY, LOITER_AT_LOCATION;
 	}
 
 	/**
@@ -98,6 +98,15 @@ public class Planner {
 				}
 			}
 			
+			// Need to assign second flag carrier
+			if(state.getFlagCarrierTwoID() == null) {
+				Ship ship = WorldKnowledge.getFlagCarrier(space, state);
+				
+				if(ship != null) {
+					state.assignFlagCarrierTwo(ship.getId());
+				}
+			}
+			
 			/* It may not be neccessary the flag carrier in close proximity to convient base
 			if(state.getBaseBuilderID() == null) { // Need to give state base builder ID
 				state.assignBaseBuilder(WorldKnowledge.getBaseBuilder(space, state).getId());
@@ -124,17 +133,31 @@ public class Planner {
 				}
 			}
 			
-			// Need to assign a location to sit while waiting for flag spawn
-			
-			if(!(ship.isCarryingFlag()) && shipID.equals(state.getFlagCarrierOneID())) { // So if we have flag carrier not carrying flag
+			if(!(ship.isCarryingFlag()) && (shipID.equals(state.getFlagCarrierOneID()) || shipID.equals(state.getFlagCarrierTwoID()))) { // So if we have flag carrier not carrying flag
 				Flag flag = WorldKnowledge.getOtherTeamFlag(space);
-				shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_FLAG, flag.getId()));
 				
-				Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, flag.getPosition()); // Get base to return to...
-				shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
-				state.assignBaseToShip(shipID, closestBase.getId());
+				UUID closestToFlag = closestToFlag(space, state.getFlagCarrierOneID(), state.getFlagCarrierTwoID());
+				
+				if(shipID.equals(closestToFlag)) { // It is closest to the flag...
+					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_FLAG, flag.getId()));
+					
+					Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, flag.getPosition()); // Get base to return to...
+					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
+					state.assignBaseToShip(shipID, closestBase.getId());
+				}
+				else { // Not closest... We need to have it loiter
+					if(shipID.equals(state.getFlagCarrierOneID())) { // Loiter at top spawn
+						shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, 
+								state.getConvientBaseBuildingLocations()[0]));
+					}
+					else { // Loiter at bottom spawn
+						shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, 
+								state.getConvientBaseBuildingLocations()[1]));
+					}
+				}
+				
 			}
-			else { // Just do asteroid gathering as usual...
+			else if(!(shipID.equals(state.getFlagCarrierOneID()) && !(shipID.equals(state.getFlagCarrierTwoID())))){ // Just do asteroid gathering as usual...
 				asteroidGathering(space, shipID);
 			}
 		}
@@ -157,6 +180,7 @@ public class Planner {
 	public AbstractAction getShipAction(Toroidal2DPhysics space, UUID shipID) {
 		Ship ship = (Ship) space.getObjectById(shipID);
 		AbstractObject goalObject;
+		Position goalPosition;
 		AbstractAction action = new DoNothingAction();
 		
 		HighLevelAction highLevelAction = shipToActionQueue.get(shipID).peek();
@@ -197,28 +221,35 @@ public class Planner {
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0 && goalObject != null) {
 					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship);
+				action = state.getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.RETURN_TO_BASE) { // Return to base
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
 					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship);
+				action = state.getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.GET_ENERGY) { // Got to get energy
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
 					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship);
+				action = state.getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.GET_FLAG) { // Getting a flag
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
 					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship);
+				action = state.getTeamMemberAction(space, ship, false);
+			}
+			else if(highLevelAction.actionType == ActionEnum.LOITER_AT_LOCATION) { // Just waiting around
+				goalPosition = highLevelAction.goalPosition;
+				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
+					state.generateTeamMemberPath(space, ship, goalPosition, WorldKnowledge.getAllObstacles(space, ship));
+				}
+				action = state.getTeamMemberAction(space, ship, true);
 			}
 		}
 		
@@ -422,6 +453,37 @@ public class Planner {
 		Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition()); // Get base to return to...
 		shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
 		state.assignBaseToShip(shipID, closestBase.getId());
+	}
+	
+	/**
+	 * 
+	 * @param space	a reference to space
+	 * @param shipIDOne
+	 * @param shipIDTwo
+	 * @return
+	 */
+	private UUID closestToFlag(Toroidal2DPhysics space, UUID shipIDOne, UUID shipIDTwo) {
+		UUID shipID = null;
+		
+		if(shipIDOne != null && shipIDTwo == null) {
+			shipID = shipIDOne;
+		}
+		else if(shipIDOne == null && shipIDTwo != null) {
+			shipID = shipIDTwo;
+		}
+		else if(shipIDOne != null && shipIDTwo != null) {
+			Ship shipOne = (Ship) space.getObjectById(shipIDOne);
+			Ship shipTwo = (Ship) space.getObjectById(shipIDTwo);
+			
+			if(space.findShortestDistance(shipOne.getPosition(), WorldKnowledge.getOtherTeamFlag(space).getPosition()) <
+					space.findShortestDistance(shipTwo.getPosition(), WorldKnowledge.getOtherTeamFlag(space).getPosition())) {
+				shipID = shipIDOne;
+			}
+			else {
+				shipID = shipIDTwo;
+			}
+		}
+		return shipID;
 	}
 	
 	/**
