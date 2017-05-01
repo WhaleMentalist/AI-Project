@@ -196,18 +196,6 @@ public class Planner {
 		
 		HighLevelAction highLevelAction = shipToActionQueue.get(shipID).peek();
 		
-		/*
-		if(space.getCurrentTimestep() % 150 == 0) {
-			if(shipID.equals(state.getFlagCarrierOneID())) {
-				System.out.println("Top Ship Action: " + highLevelAction.actionType);
-			}
-			
-			if(shipID.equals(state.getFlagCarrierTwoID())) {
-				System.out.println("Bottom Ship Action: " + highLevelAction.actionType);
-			}
-		}
-		*/
-		
 		// One of the events that will trigger a contingency plan... Low Energy state...
 		if((highLevelAction == null && ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) || 
 				(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD && !(highLevelAction.actionType == ActionEnum.GET_ENERGY))) {
@@ -333,7 +321,6 @@ public class Planner {
 					shipToActionQueue.get(shipID).remove();
 					
 					if(!(WorldKnowledge.getOtherTeamFlag(space).isAlive())) { // Means we need to replan flag carriers
-						System.out.println("Flag is returned... So it is dead...");
 						isFlagWasDead = true;
 					}
 					
@@ -373,9 +360,8 @@ public class Planner {
 	 * @param space
 	 */
 	public void checkReplanFlagCarriers(Toroidal2DPhysics space) {
-		if(isFlagWasDead) {
+		if(isFlagWasDead && !(ASTEROID_GATHERING_PHASE)) {
 			if(WorldKnowledge.getOtherTeamFlag(space).isAlive()) { // So flag has repawned... Now we can replan
-				System.out.println("Flag has respawned... Create new plan");
 				formulatePlan(space, state.getFlagCarrierOneID());
 				formulatePlan(space, state.getFlagCarrierTwoID());
 				isFlagWasDead = false;
@@ -431,6 +417,14 @@ public class Planner {
 	 */
 	public void setAsteroidGatheringPhase(boolean value) {
 		ASTEROID_GATHERING_PHASE = value;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public boolean getAsteroidGatheringPhase() {
+		return ASTEROID_GATHERING_PHASE;
 	}
 	
 	/**

@@ -61,6 +61,11 @@ public class MultiShipAgent extends TeamClient {
 	private static boolean REPLAN_TRIGGER = false;
 	
 	/**
+	 * Flags if a ship was bought
+	 */
+	private static boolean BOUGHT_SHIP = false;
+	
+	/**
 	 * Contains domain knowledge of the team
 	 */
 	private StateRepresentation state;
@@ -69,12 +74,19 @@ public class MultiShipAgent extends TeamClient {
 	 * The planner that directs the ship actions
 	 */
 	private Planner planner;
+	
+	/**
+	 * This will track how many 'Double Base Heal Powerups' 
+	 * were bought at a particular base
+	 */
+	private Integer[] doubleBaseHealpowerUpAmount;
 
 	@Override
 	public Map<UUID, AbstractAction> getMovementStart(Toroidal2DPhysics space,
 			Set<AbstractActionableObject> actionableObjects) {
 		
 		if(!INITIALIZED) { // Provide navigators to each ship
+			System.out.println("Performing Initialization");
 			WorldKnowledge.setTeamName(TEAM_NAME);
 			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
 				state.assignShipToNavigator(ship.getId(), new Navigator(DEBUG_MODE));
@@ -82,6 +94,16 @@ public class MultiShipAgent extends TeamClient {
 			}
 			state.assignBaseBuildingLocations(space, WorldKnowledge.getOtherTeamFlag(space));
 			INITIALIZED = true; // Initialization performed!
+		}
+		
+		if(BOUGHT_SHIP) { // When ship is bought it must be assigned a navigator and action queue
+			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
+				if(!(state.shipAssignedNavigator(ship))) {
+					state.assignShipToNavigator(ship.getId(), new Navigator(DEBUG_MODE));
+					planner.assignShipToActionQueue(ship.getId());
+				}
+			}
+			BOUGHT_SHIP = false;
 		}
 		
 		// Need to clear planner to do replan...
@@ -125,13 +147,29 @@ public class MultiShipAgent extends TeamClient {
 		for (AbstractObject actionable :  actionableObjects) {
 			if (actionable instanceof Base) {
 				base = (Base) actionable;
-
-				// Check for 'Double Base Healing Speed' powerup
-				if (base.isValidPowerup(SpaceSettlersPowerupEnum.DOUBLE_BASE_HEALING_SPEED)) {
-					System.out.println("Base using 'Double Base Healing Speed' powerup...");
-					powerUps.put(base.getId(), SpaceSettlersPowerupEnum.DOUBLE_BASE_HEALING_SPEED);
+				
+				if(space.findShortestDistance(base.getPosition(), state.getConvientBaseBuildingLocations()[0]) 
+						< WorldKnowledge.BASE_AT_LOCATION_THRESHOLD) {
+					if(doubleBaseHealpowerUpAmount[0] <= doubleBaseHealpowerUpAmount[1]) {
+						// Check for 'Double Base Healing Speed' powerup
+						if (base.isValidPowerup(SpaceSettlersPowerupEnum.DOUBLE_BASE_HEALING_SPEED)) {
+							System.out.println("Base using 'Double Base Healing Speed' powerup...At top base...");
+							powerUps.put(base.getId(), SpaceSettlersPowerupEnum.DOUBLE_BASE_HEALING_SPEED);
+							doubleBaseHealpowerUpAmount[0] = ++doubleBaseHealpowerUpAmount[0];
+						}
+					}
 				}
-
+				else if(space.findShortestDistance(base.getPosition(), state.getConvientBaseBuildingLocations()[1])
+						< WorldKnowledge.BASE_AT_LOCATION_THRESHOLD) {
+					if(doubleBaseHealpowerUpAmount[1] <= doubleBaseHealpowerUpAmount[0]) {
+						// Check for 'Double Base Healing Speed' powerup
+						if (base.isValidPowerup(SpaceSettlersPowerupEnum.DOUBLE_BASE_HEALING_SPEED)) {
+							System.out.println("Base using 'Double Base Healing Speed' powerup... At bottom base...");
+							powerUps.put(base.getId(), SpaceSettlersPowerupEnum.DOUBLE_BASE_HEALING_SPEED);
+							doubleBaseHealpowerUpAmount[1] = ++doubleBaseHealpowerUpAmount[1];
+						}
+					}
+				}
 			}
 		}
 		return powerUps;
@@ -157,7 +195,7 @@ public class MultiShipAgent extends TeamClient {
 		Ship ship;
 		
 		// We can afford a base to purchase!
-		if (purchaseCosts.canAfford(PurchaseTypes.BASE, resourcesAvailable)) {
+		if (purchaseCosts.canAfford(PurchaseTypes.BASE, resourcesAvailable) && !(planner.getAsteroidGatheringPhase())) {
 			for (AbstractActionableObject actionableObject : actionableObjects) {
 				if(actionableObject instanceof Ship) {
 					ship = (Ship) actionableObject;
@@ -171,37 +209,50 @@ public class MultiShipAgent extends TeamClient {
 			}
 		}
 		
-		/*
+	
 		// We can start buying ships after we have established convient bases
-		if (purchaseCosts.canAfford(PurchaseTypes.SHIP, resourcesAvailable) && 
+		if (purchaseCosts.canAfford(PurchaseTypes.SHIP, resourcesAvailable) && !(planner.getAsteroidGatheringPhase()) && 
 				WorldKnowledge.isBaseBuiltAtLocation(space, state.getConvientBaseBuildingLocations()[0])
 				&& WorldKnowledge.isBaseBuiltAtLocation(space, state.getConvientBaseBuildingLocations()[1]) 
-				&& WorldKnowledge.getTeamShips(space).size() < 5) {
+				&& WorldKnowledge.getTeamShips(space).size() < 4) {
 			for (AbstractActionableObject actionableObject : actionableObjects) {
 				if (actionableObject instanceof Base) {
 					Base base = (Base) actionableObject;
-					purchases.put(base.getId(), PurchaseTypes.SHIP);
-					BOUGHT_SHIP = true;
-					System.out.println("Buying ship!");
-					break;
+					if(base.isHomeBase()) {
+						purchases.put(base.getId(), PurchaseTypes.SHIP);
+						BOUGHT_SHIP = true;
+						System.out.println("Buying ship at 'Home Base'!");
+						break;
+					}
 				}
 			}
 		}
-		*/
 		
-		/*
-		if (purchaseCosts.canAfford(PurchaseTypes.POWERUP_DOUBLE_BASE_HEALING_SPEED, resourcesAvailable)) {
+		if (purchaseCosts.canAfford(PurchaseTypes.POWERUP_DOUBLE_BASE_HEALING_SPEED, resourcesAvailable) && 
+				WorldKnowledge.isBaseBuiltAtLocation(space, state.getConvientBaseBuildingLocations()[0])
+				&& WorldKnowledge.isBaseBuiltAtLocation(space, state.getConvientBaseBuildingLocations()[1])) {
 			for (AbstractActionableObject actionableObject : actionableObjects) {
 				if (actionableObject instanceof Base) {
 					Base base = (Base) actionableObject;
-					purchases.put(base.getId(), PurchaseTypes.POWERUP_DOUBLE_BASE_HEALING_SPEED);
-					System.out.println("Base buying double healing powerup...");
-					break;
+					if(space.findShortestDistance(base.getPosition(), state.getConvientBaseBuildingLocations()[0]) 
+							< WorldKnowledge.BASE_AT_LOCATION_THRESHOLD) {
+						if(doubleBaseHealpowerUpAmount[0] <= doubleBaseHealpowerUpAmount[1]) {
+							purchases.put(base.getId(), PurchaseTypes.POWERUP_DOUBLE_BASE_HEALING_SPEED);
+							System.out.println("Base buying double healing powerup... Top Base...");
+							break;
+						}
+					}
+					else if(space.findShortestDistance(base.getPosition(), state.getConvientBaseBuildingLocations()[1])
+								< WorldKnowledge.BASE_AT_LOCATION_THRESHOLD) {
+						if(doubleBaseHealpowerUpAmount[1] <= doubleBaseHealpowerUpAmount[0]) {
+							purchases.put(base.getId(), PurchaseTypes.POWERUP_DOUBLE_BASE_HEALING_SPEED);
+							System.out.println("Base buying double healing powerup... Bottom Base...");
+							break;
+						}
+					}
 				}
-
 			}
 		}
-		*/
 		
 		return purchases;
 	}
@@ -212,12 +263,29 @@ public class MultiShipAgent extends TeamClient {
 		planner = new Planner(state); // Create planner to direct other ships
 		TEAM_NAME = super.getTeamName();
 		System.out.println("Initialized: " + TEAM_NAME);
+		doubleBaseHealpowerUpAmount = new Integer[2]; // Only two convient locations
 		
+		// Start bases at zero times used
+		doubleBaseHealpowerUpAmount[0] = 0;
+		doubleBaseHealpowerUpAmount[1] = 0;
 	}
 
 	@Override
 	public void shutDown(Toroidal2DPhysics space) {
+		INITIALIZED = false;
+		NEXT_PHASE_ISSUED = false;
+		REPLAN_TRIGGER = false;
+		BOUGHT_SHIP = false;
+		state = new StateRepresentation(); // Representation that contains important doman knowledge
+		planner = new Planner(state); // Create planner to direct other ships
+		TEAM_NAME = super.getTeamName();
+		System.out.println("Shutting Down: " + TEAM_NAME);
+		doubleBaseHealpowerUpAmount = new Integer[2]; // Only two convient locations
 		
+		// Start bases at zero times used
+		doubleBaseHealpowerUpAmount[0] = 0;
+		doubleBaseHealpowerUpAmount[1] = 0;
+		planner.setAsteroidGatheringPhase(true);
 	}
 
 	@Override

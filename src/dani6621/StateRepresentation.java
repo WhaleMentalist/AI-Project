@@ -339,7 +339,6 @@ public class StateRepresentation {
 	 * Clears all the mapping relations
 	 */
 	public void clear() {
-		System.out.println("Clearing the state");
 		asteroidToShip.clear();
 		beaconToShip.clear();
 		baseToShip.clear();
