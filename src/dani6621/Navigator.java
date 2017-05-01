@@ -1,6 +1,9 @@
 package dani6621;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
+import java.util.Stack;
+import java.util.UUID;
 
 import dani6621.GraphSearch.GraphSearchNode;
 import spacesettlers.actions.AbstractAction;
@@ -9,6 +12,8 @@ import spacesettlers.actions.MoveAction;
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
+import spacesettlers.utilities.Position;
+import spacesettlers.utilities.Vector2D;
 
 /**
  * The class is designed to guide the agent along a path that
@@ -25,15 +30,10 @@ public class Navigator {
 	private final boolean DEBUG_MODE;
 	
 	/**
-	 * The minimal path needed to pursue object
-	 */
-	private static final int MINIMAL_PATH = 3;
-	
-	/**
 	 * Abstraction of the navigation problem as 
 	 * a graph data structure
 	 */
-	public NavigationMap map;
+	private NavigationMap map;
 	
 	/**
 	 * The path to the objective (i.e goal)
@@ -51,6 +51,12 @@ public class Navigator {
 	 * intercept it.
 	 */
 	private AbstractObject goalObject;
+	
+	/**
+	 * The goal position the search wishes to find path 
+	 * to
+	 */
+	private Position goalPosition;
 	
 	/**
 	 * Exception designed when navigation fails (i.e search fails)
@@ -93,18 +99,24 @@ public class Navigator {
 	 * to follow the path. It will continue to 'pop' the stack until empty.
 	 * 
 	 * @param space the reference to game space used for utility functions
-	 * @param knowledge the reference to knowledge representation used for utility functions
 	 * @param ship the ship that is transversing the path
 	 * @return an action the ship will take to follow the path stored
 	 */
-	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, GAWorldState knowledge, Ship ship) {
+	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, Ship ship) {
 		
-		// If ship is close enough to goal, then simply go straight to goal
-		if(goalObject != null && space.findShortestDistance(goalObject.getPosition(), 
-				ship.getPosition()) < NavigationMap.SPACING * 2.0 &&
-				path.size() < MINIMAL_PATH) {
+		// If ship has no obstruction to goal go straight to it
+		if((goalObject != null && 
+				space.isPathClearOfObstructions(ship.getPosition(), goalObject.getPosition(), 
+						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE))) {
 			return new MoveAction(space, ship.getPosition(), goalObject.getPosition(),
-					knowledge.calculateInterceptVelocity(goalObject));
+					WorldKnowledge.calculateInterceptVelocity(space, ship, goalObject));
+		}
+		
+		// If no goal object check goal position
+		if(goalPosition != null && space.isPathClearOfObstructions(ship.getPosition(), goalPosition, 
+						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE)) {
+			return new MoveAction(space, ship.getPosition(), goalPosition ,
+					WorldKnowledge.calculateVelocity(space, ship, goalPosition));
 		}
 		
 		// Check if the current path is empty or no path formed at all
@@ -113,40 +125,47 @@ public class Navigator {
 			if(currentTargetNode == null) { // Assign a new node
 				currentTargetNode = path.pop();
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
-						knowledge.calculateVelocity(currentTargetNode.node.position));
+						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
 			}
-			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 4)) {
+			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 2)) {
 				currentTargetNode = path.pop();
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
-						knowledge.calculateVelocity(currentTargetNode.node.position));
+						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
 			}
 			else {
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
-						knowledge.calculateVelocity(currentTargetNode.node.position));
+						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
 			}
 		}
 		else {
-			return new DoNothingAction(); // Can't do anything if search fails
+			return new DoNothingAction();
 		}
 	}
 	
 	/**
 	 * Function will return a <code>AbstractAction</code> that allows the agent 
-	 * to follow the path. It will continue to 'pop' the stack until empty.
+	 * to follow the path. It will continue to 'pop' the stack until empty. It 
+	 * will end up with the ship staying at a point...
 	 * 
 	 * @param space the reference to game space used for utility functions
-	 * @param knowledge the reference to knowledge representation used for utility functions
 	 * @param ship the ship that is transversing the path
 	 * @return an action the ship will take to follow the path stored
 	 */
-	public AbstractAction retrieveNavigationAction(Toroidal2DPhysics space, SAWorldState knowledge, Ship ship) {
+	public AbstractAction retrieveNavigationActionLoiter(Toroidal2DPhysics space, Ship ship) {
 		
-		// If ship is close enough to goal, then simply go straight to goal
-		if(goalObject != null && space.findShortestDistance(goalObject.getPosition(), 
-				ship.getPosition()) < NavigationMap.SPACING * 2.0 &&
-				path.size() < MINIMAL_PATH) {
+		// If ship has no obstruction to goal go straight to it
+		if((goalObject != null && 
+				space.isPathClearOfObstructions(ship.getPosition(), goalObject.getPosition(), 
+						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE))) {
 			return new MoveAction(space, ship.getPosition(), goalObject.getPosition(),
-					knowledge.calculateInterceptVelocity(goalObject));
+					new Vector2D(0.0, 0.0));
+		}
+		
+		// If no goal object check goal position
+		if(goalPosition != null && space.isPathClearOfObstructions(ship.getPosition(), goalPosition, 
+						WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship), NavigationMap.CLOSE_DISTANCE)) {
+			return new MoveAction(space, ship.getPosition(), goalPosition,
+					new Vector2D(0.0, 0.0));
 		}
 		
 		// Check if the current path is empty or no path formed at all
@@ -155,20 +174,20 @@ public class Navigator {
 			if(currentTargetNode == null) { // Assign a new node
 				currentTargetNode = path.pop();
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
-						knowledge.calculateVelocity(currentTargetNode.node.position));
+						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
 			}
-			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 4)) {
+			else if(space.findShortestDistance(ship.getPosition(), currentTargetNode.node.position) < (NavigationMap.SPACING / 2)) {
 				currentTargetNode = path.pop();
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
-						knowledge.calculateVelocity(currentTargetNode.node.position));
+						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
 			}
 			else {
 				return new MoveAction(space, ship.getPosition(), currentTargetNode.node.position,
-						knowledge.calculateVelocity(currentTargetNode.node.position));
+						WorldKnowledge.calculateVelocity(space, ship, currentTargetNode.node.position));
 			}
 		}
 		else {
-			return new DoNothingAction(); // Can't do anything if search fails
+			return new DoNothingAction();
 		}
 	}
 	
@@ -178,30 +197,29 @@ public class Navigator {
 	 * algorithms.
 	 * 
 	 * @param space the reference to game space used for utility functions
-	 * @param knowledge the reference to knowledge representation used for utility functions
 	 * @param ship the ship that is transversing the path
 	 * @param goal the goal the ship needs to reach
 	 * @param obstacles the obstacles to avoid
 	 */
-	public void generateAStarPath(Toroidal2DPhysics space, GAWorldState knowledge, AbstractObject ship, 
+	public void generateAStarPath(Toroidal2DPhysics space, AbstractObject ship, 
 			AbstractObject goal, Set<AbstractObject> obstacles) {
 		
 		currentTargetNode = null;
-		map = new NavigationMap(space, knowledge, DEBUG_MODE); // Generate graph for problem
+		map = new NavigationMap(space, DEBUG_MODE); // Generate graph for problem
 		goalObject = goal;
 		
 		if(goalObject == null) {
+			System.out.println("Null goal object");
 			throw new NavigationFailureException("Navigation failed! No object was specified!");
 		}
 		
-		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
+		GraphSearch graphSearch = new GraphSearch(map, ship, goal.getPosition()); // Give search parameters
 		
 		try {
-			path = graphSearch.aStarSearch(obstacles); // Generate a path
+			path = graphSearch.aStarSearch(space, obstacles); // Generate a path
 		}
 		catch(GraphSearch.SearchFailureException e) {
 			path = new Stack<GraphSearchNode>();
-			throw new NavigationFailureException("Navigation failed! Search algorithm did not find path!");
 		}
 	}
 	
@@ -211,30 +229,25 @@ public class Navigator {
 	 * algorithms.
 	 * 
 	 * @param space the reference to game space used for utility functions
-	 * @param knowledge the reference to knowledge representation used for utility functions
 	 * @param ship the ship that is transversing the path
 	 * @param goal the goal the ship needs to reach
 	 * @param obstacles the obstacles to avoid
 	 */
-	public void generateAStarPath(Toroidal2DPhysics space, SAWorldState knowledge, AbstractObject ship, 
-			AbstractObject goal, Set<AbstractObject> obstacles) {
+	public void generateAStarPath(Toroidal2DPhysics space, AbstractObject ship, 
+			Position goal, Set<AbstractObject> obstacles) {
 		
 		currentTargetNode = null;
-		map = new NavigationMap(space, knowledge, DEBUG_MODE); // Generate graph for problem
-		goalObject = goal;
-		
-		if(goalObject == null) {
-			throw new NavigationFailureException("Navigation failed! No object was specified!");
-		}
+		map = new NavigationMap(space, DEBUG_MODE); // Generate graph for problem
+		goalObject = null;
+		goalPosition = goal;
 		
 		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
 		
 		try {
-			path = graphSearch.aStarSearch(obstacles); // Generate a path
+			path = graphSearch.aStarSearch(space, obstacles); // Generate a path
 		}
 		catch(GraphSearch.SearchFailureException e) {
 			path = new Stack<GraphSearchNode>();
-			throw new NavigationFailureException("Navigation failed! Search algorithm did not find path!");
 		}
 	}
 	
@@ -244,15 +257,14 @@ public class Navigator {
 	 * algorithms.  This particular search is greedy best first search
 	 * 
 	 * @param space the reference to game space used for utility functions
-	 * @param knowledge the reference to knowledge representation used for utility functions
 	 * @param ship the ship that is transversing the path
 	 * @param goal the goal the ship needs to reach
 	 */
-	public void generateGreedyBFPath(Toroidal2DPhysics space, GAWorldState knowledge, AbstractObject ship, AbstractObject goal) {
+	public void generateGreedyBFPath(Toroidal2DPhysics space, AbstractObject ship, AbstractObject goal) {
 		currentTargetNode = null;
-		map = new NavigationMap(space, knowledge, DEBUG_MODE); // Generate graph for problem
+		map = new NavigationMap(space, DEBUG_MODE); // Generate graph for problem
 		goalObject = goal;
-		GraphSearch graphSearch = new GraphSearch(map, ship, goal); // Give search parameters
+		GraphSearch graphSearch = new GraphSearch(map, ship, goal.getPosition()); // Give search parameters
 		
 		try {
 			path = graphSearch.greedyBFSearch(); // Generate a path
@@ -272,6 +284,19 @@ public class Navigator {
 		if(path == null) 
 			return null;
 		return (List<GraphSearchNode>) path.clone();
+	}
+	
+	/**
+	 * Function retrieves the UUID of goal object
+	 * 
+	 * @return	the <code>UUID</code> of goal object
+	 * 			NOTE: This can return <code>null</code>
+	 */
+	public UUID getGoalObjectUUID() {
+		UUID id = null;
+		if(goalObject != null)
+			id = goalObject.getId();
+		return id;
 	}
 	
 }

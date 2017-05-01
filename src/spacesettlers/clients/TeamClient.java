@@ -44,13 +44,22 @@ abstract public class TeamClient {
 	/**
 	 * Save the random number generator for future use
 	 */
-	Random random;
+	protected Random random;
+	
+	/**
+	 * Maximum number of ships (copy of what is stored in Team, since the individual clients can't access Team)
+	 */
+	int maxNumberShips;
 	
 	/**
 	 * Transformation for mouse clicks
 	 */
 	AffineTransform mouseTransform;
 	
+	/**
+	 * Sets the random number generator to the global one (for repeatability)
+	 * @param random
+	 */
 	public void setRandom(Random random) {
 		this.random = random;
 	}
@@ -83,6 +92,24 @@ abstract public class TeamClient {
 		this.teamName = teamName;
 	}
 	
+	/**
+	 * Get the maximum number of ships for this team
+	 * @return
+	 */
+	public int getMaxNumberShips() {
+		return maxNumberShips;
+	}
+
+	/**
+	 * Set the maximum number of ships (just a copy from Team, setting this inside your
+	 * client will have NO effect on the simulator)
+	 * 
+	 * @param maxNumberShips
+	 */
+	public void setMaxNumberShips(int maxNumberShips) {
+		this.maxNumberShips = maxNumberShips;
+	}
+
 	/**
 	 * Called when the team is created from the config file
 	 * @param knowledgeFile

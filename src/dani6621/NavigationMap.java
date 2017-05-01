@@ -129,7 +129,7 @@ public class NavigationMap {
 	/**
 	 * Determines if vertex is close to obstacle
 	 */
-	private static final int CLOSE_DISTANCE = (int) (Ship.SHIP_RADIUS * 2.5);
+	public static final int CLOSE_DISTANCE = (int) (Ship.SHIP_RADIUS * 2.5);
 	
 	/**
 	 * Set value for graphcis debugging
@@ -174,61 +174,9 @@ public class NavigationMap {
 	 * @param space the space being abstracted by the 
 	 * 			graph
 	 * 
-	 * @param knowledge the knowledge representation
-	 * 
 	 *@param debug	the flag for graphics display
 	 */
-	public NavigationMap(Toroidal2DPhysics space, GAWorldState knowledge, boolean debug) {
-		DEBUG_MODE = debug;
-		graphDrawing = new ArrayList<SpacewarGraphics>();
-		
-		spaceRef = space;
-		// Get dimensions of environment
-		int height = spaceRef.getHeight();
-		int width = spaceRef.getWidth();
-		
-		// Calculate number of row points and column points
-		rowNodeNumber = width / SPACING;
-		columnNodeNumber = height / SPACING;
-		
-		// Get number of vertices in the graph
-		int numberOfVertices = rowNodeNumber * columnNodeNumber;
-		
-		// Initialize graph to hold correct number of vertices
-		dataPoints = new Graph<NavigationVertexKey, NavigationVertex>(numberOfVertices);
-		
-		Position nodePosition;
-		NavigationVertexKey key;
-		NavigationVertex vertex;
-		
-		// Enumerate through rows after columns
-		for(int i = 0; i < rowNodeNumber; ++i) {
-			// Go down along column first
-			for(int j = 0; j < columnNodeNumber; ++j) { // Populate graph with vertices
-				nodePosition = new Position((double) i * SPACING, (double) j * SPACING);
-				vertex = new NavigationVertex(nodePosition);
-				key = new NavigationVertexKey(i, j);
-				dataPoints.addVertex(key, vertex);
-				if(DEBUG_MODE)
-					graphDrawing.add(new StarGraphics(Color.RED, nodePosition));
-			}
-		}
-		
-		obstacles = new HashSet<AbstractObject>(); // Instantiate
-	}
-	
-	/**
-	 * Constructor will initialize and create graph
-	 * with proper edges and connections
-	 * 
-	 * @param space the space being abstracted by the 
-	 * 			graph
-	 * 
-	 * @param knowledge the knowledge representation
-	 * 
-	 *@param debug	the flag for graphics display
-	 */
-	public NavigationMap(Toroidal2DPhysics space, SAWorldState knowledge, boolean debug) {
+	public NavigationMap(Toroidal2DPhysics space, boolean debug) {
 		DEBUG_MODE = debug;
 		graphDrawing = new ArrayList<SpacewarGraphics>();
 		
@@ -377,11 +325,11 @@ public class NavigationMap {
 	/** 
 	 * Finds the coordinate vertex that is closest to the passed object
 	 * 
-	 * @param myObj - Passes an abstract object
+	 * @param position	position of object
 	 * @return Vertex object that is closest to the argument
 	 */
-	public NavigationVertex findNearestVertex(AbstractObject myObj) {
-		Position objPos = myObj.getPosition();
+	public NavigationVertex findNearestVertex(Position position) {
+		Position objPos = position;
 		Double xCoord = objPos.getX();
 		Double yCoord = objPos.getY();
 		
