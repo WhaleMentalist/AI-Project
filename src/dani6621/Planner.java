@@ -55,6 +55,11 @@ public class Planner {
 		GET_FLAG, RETURN_TO_BASE, GET_ASTEROID,
 		GET_ENERGY, LOITER_AT_LOCATION;
 	}
+	
+	/**
+	 * 
+	 */
+	private boolean isFlagWasDead;
 
 	/**
 	 * The list of actions each ship performs
@@ -107,14 +112,9 @@ public class Planner {
 				}
 			}
 			
-			/* It may not be neccessary the flag carrier in close proximity to convient base
-			if(state.getBaseBuilderID() == null) { // Need to give state base builder ID
-				state.assignBaseBuilder(WorldKnowledge.getBaseBuilder(space, state).getId());
-			}
-			*/
-			
 			Ship ship = (Ship) space.getObjectById(shipID);
-			state.assignShipToResourceCount(ship.getId(), ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
+			state.assignShipToResourceCount(ship.getId(), 
+					ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
 			emptyShipActionQueue(shipID);
 			
 			// Low energy state...
@@ -194,21 +194,24 @@ public class Planner {
 		Position goalPosition;
 		AbstractAction action = new DoNothingAction();
 		
-		if(space.getCurrentTimestep() % 100 == 0) {
-			System.out.println("-----------------------------------------------------");
-			System.out.println("Plan for: " + shipID);
-			for(HighLevelAction a : shipToActionQueue.get(shipID)) {
-				System.out.println(shipID + " : " + a.actionType + "," + a.goalObject);
-			}
-			System.out.println("-----------------------------------------------------");
-		}
-		
 		HighLevelAction highLevelAction = shipToActionQueue.get(shipID).peek();
+		
+		/*
+		if(space.getCurrentTimestep() % 150 == 0) {
+			if(shipID.equals(state.getFlagCarrierOneID())) {
+				System.out.println("Top Ship Action: " + highLevelAction.actionType);
+			}
+			
+			if(shipID.equals(state.getFlagCarrierTwoID())) {
+				System.out.println("Bottom Ship Action: " + highLevelAction.actionType);
+			}
+		}
+		*/
 		
 		// One of the events that will trigger a contingency plan... Low Energy state...
 		if((highLevelAction == null && ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) || 
 				(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD && !(highLevelAction.actionType == ActionEnum.GET_ENERGY))) {
-			System.out.println("Contingency plan... Need energy... Ship: " + shipID);
+			// System.out.println("Contingency plan... Need energy... Ship: " + shipID);
 			AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, state);
 			
 			if(energySource != null) {
@@ -315,7 +318,6 @@ public class Planner {
 				Asteroid asteroid = (Asteroid) space.getObjectById(asteroidID);
 				
 				if(asteroid == null || !(asteroid.isAlive())) { // If asteroid is dead
-					// System.out.println("Asteroid is dead");
 					state.unassignAsteroidToShip(asteroidID); // Make sure to unassign
 					shipToActionQueue.get(shipID).remove(); // Remove the no longer valid action from queue
 				}
@@ -327,23 +329,15 @@ public class Planner {
 				if((ship == null || !(ship.isAlive())) || ship.getResources().getTotal() == 0 && 
 						space.findShortestDistance(ship.getPosition(), base.getPosition()) < StateRepresentation.HIT_BASE_DISTANCE 
 						&& !(ship.isCarryingFlag())) {
-					// System.out.println("Hit base");
 					state.unassignBaseToShip(base.getId());
 					shipToActionQueue.get(shipID).remove();
 					
-					// Need to replan
-					if(shipID.equals(state.getFlagCarrierOneID())) {
-						System.out.println("Flag Carrier Return: Replan");
-						replan(space);
-						
+					if(!(WorldKnowledge.getOtherTeamFlag(space).isAlive())) { // Means we need to replan flag carriers
+						System.out.println("Flag is returned... So it is dead...");
+						isFlagWasDead = true;
 					}
-					else if(shipID.equals(state.getFlagCarrierTwoID())) { // Again... Replan trigger
-						System.out.println("Flag Carrier Return: Replan");
-						replan(space);
-					}
-					else { // Create plan for just the ship...
-						formulatePlan(space, shipID);
-					}
+					
+					formulatePlan(space, shipID);
 				}
 			}
 			else if(action.actionType == ActionEnum.GET_ENERGY) { // Check if energy source is still alive
@@ -367,10 +361,24 @@ public class Planner {
 			}
 			else if(action.actionType == ActionEnum.GET_FLAG) {
 				Ship ship = (Ship) space.getObjectById(shipID);
-				
 				if(ship.isCarryingFlag()) {
 					shipToActionQueue.get(shipID).remove();
 				}
+			}
+		}
+	}
+	
+	/**
+	 * 
+	 * @param space
+	 */
+	public void checkReplanFlagCarriers(Toroidal2DPhysics space) {
+		if(isFlagWasDead) {
+			if(WorldKnowledge.getOtherTeamFlag(space).isAlive()) { // So flag has repawned... Now we can replan
+				System.out.println("Flag has respawned... Create new plan");
+				formulatePlan(space, state.getFlagCarrierOneID());
+				formulatePlan(space, state.getFlagCarrierTwoID());
+				isFlagWasDead = false;
 			}
 		}
 	}
@@ -385,7 +393,6 @@ public class Planner {
 	
 	/**
 	 * Function will undo the affects of ship's action...
-	 * 
 	 * 
 	 * @param space
 	 * @param shipID
@@ -411,9 +418,6 @@ public class Planner {
 						state.unassignBeaconToShip(energySource.getId());
 					}
 				}
-				else if(action.actionType == ActionEnum.GET_FLAG) {
-					state.unassignFlagCarrierOne();
-				}
 			}
 		}
 		emptyShipActionQueue(shipID); // Give new queue that is empty
@@ -427,18 +431,6 @@ public class Planner {
 	 */
 	public void setAsteroidGatheringPhase(boolean value) {
 		ASTEROID_GATHERING_PHASE = value;
-	}
-	
-	/**
-	 * Function will have planner erase state mutation
-	 * 
-	 * @param space	a reference to space
-	 */
-	public void replan(Toroidal2DPhysics space) {
-		clear();
-		for(UUID id : shipToActionQueue.keySet()) {
-			formulatePlan(space, id);
-		}
 	}
 	
 	/**

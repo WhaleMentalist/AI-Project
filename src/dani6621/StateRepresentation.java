@@ -39,6 +39,11 @@ public class StateRepresentation {
 	 * Detect if ship has reached base
 	 */
 	public static final double HIT_BASE_DISTANCE = 30.0;
+	
+	/**
+	 * Tells other parts of program that flagged was or was not returned
+	 */
+	private static boolean FLAG_RETURNED = false;
 
 	/**
 	 * Stores the location of good placement for base
@@ -246,13 +251,6 @@ public class StateRepresentation {
 	
 	/**
 	 * 
-	 */
-	public void unassignFlagCarrierOne() {
-		flagCarrierOneID =  null;
-	}
-	
-	/**
-	 * 
 	 * @param shipID
 	 */
 	public void assignFlagCarrierTwo(UUID shipID) {
@@ -265,13 +263,6 @@ public class StateRepresentation {
 	 */
 	public UUID getFlagCarrierTwoID() {
 		return flagCarrierTwoID;
-	}
-	
-	/**
-	 * 
-	 */
-	public void unassignFlagCarrierTwo() {
-		flagCarrierTwoID = null;
 	}
 	
 	/**
@@ -471,5 +462,21 @@ public class StateRepresentation {
 		}
 		
 		return flagSpawn;
+	}
+	
+	/**
+	 * 
+	 * @param value
+	 */
+	public static void setFlagReturned(boolean value) {
+		FLAG_RETURNED = value;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public static boolean getFlagReturned() {
+		return FLAG_RETURNED;
 	}
 } 

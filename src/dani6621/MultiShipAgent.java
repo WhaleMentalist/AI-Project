@@ -112,6 +112,7 @@ public class MultiShipAgent extends TeamClient {
             if (actionable instanceof Ship) {
                 Ship ship = (Ship) actionable;
                 planner.checkCurrentAction(space, ship.getId()); // Ensure current action is valid
+                planner.checkReplanFlagCarriers(space);
             }
         }
 	}

@@ -40,7 +40,7 @@ public class WorldKnowledge {
 	/**
 	 * Signifies if ship is close enough to location to build a base
 	 */
-	public static final double BASE_BUILD_THRESHOLD = 75.0;
+	public static final double BASE_BUILD_THRESHOLD = 15.0;
 
 	/**
 	 * Threshold for refuel
@@ -439,7 +439,7 @@ public class WorldKnowledge {
     public static boolean isBaseBuiltAtLocation(Toroidal2DPhysics space, Position position) {
     	boolean result = false;
     	for(Base base : WorldKnowledge.getTeamBases(space)) {
-    		if(space.findShortestDistance(base.getPosition(), position) < BASE_AT_LOCATION_THRESHOLD) {
+    		if(space.findShortestDistance(base.getPosition(), position) < WorldKnowledge.BASE_AT_LOCATION_THRESHOLD) {
     			result = true;
     			break;
     		}
