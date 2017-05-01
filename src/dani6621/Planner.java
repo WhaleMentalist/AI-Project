@@ -362,8 +362,13 @@ public class Planner {
 	public void checkReplanFlagCarriers(Toroidal2DPhysics space) {
 		if(isFlagWasDead && !(ASTEROID_GATHERING_PHASE)) {
 			if(WorldKnowledge.getOtherTeamFlag(space).isAlive()) { // So flag has repawned... Now we can replan
-				formulatePlan(space, state.getFlagCarrierOneID());
-				formulatePlan(space, state.getFlagCarrierTwoID());
+				if(state.getFlagCarrierOneID() != null) {
+					formulatePlan(space, state.getFlagCarrierOneID());
+				}
+				
+				if(state.getFlagCarrierTwoID() != null) {
+					formulatePlan(space, state.getFlagCarrierTwoID());
+				}
 				isFlagWasDead = false;
 			}
 		}
