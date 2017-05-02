@@ -84,11 +84,6 @@ public class StateRepresentation {
 	private UUID flagCarrierTwoID;
 	
 	/**
-	 * Store the ID of base builder
-	 */
-	private UUID baseBuilderID;
-	
-	/**
 	 * Data structure will store ship to navigator
 	 */
 	private HashMap<UUID, Navigator> shipToNavigator;
@@ -105,7 +100,6 @@ public class StateRepresentation {
 		baseToShip = new HashMap<UUID, UUID>();
 		flagCarrierOneID = null;
 		flagCarrierTwoID = null;
-		baseBuilderID = null;
 		shipToNavigator = new HashMap<UUID, Navigator>();
 	}
 	
@@ -263,22 +257,6 @@ public class StateRepresentation {
 	 */
 	public UUID getFlagCarrierTwoID() {
 		return flagCarrierTwoID;
-	}
-	
-	/**
-	 * 
-	 * @param shipID
-	 */
-	public void assignBaseBuilder(UUID shipID) {
-		baseBuilderID = shipID;
-	}
-	
-	/**
-	 * 
-	 * @return
-	 */
-	public UUID getBaseBuilderID() {
-		return baseBuilderID;
 	}
 	
 	/**
