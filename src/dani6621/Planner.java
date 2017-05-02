@@ -52,14 +52,14 @@ public class Planner {
 	 *
 	 */
 	public enum ActionEnum {
-		GET_FLAG, RETURN_TO_BASE, GET_ASTEROID,
-		GET_ENERGY, LOITER_AT_LOCATION;
+		GET_FLAG, GET_ASTEROID, RETURN_TO_BASE, 
+		LOITER_AT_LOCATION, GET_ENERGY;
 	}
 	
 	/**
 	 * 
 	 */
-	private boolean isFlagWasDead;
+	private boolean isFlagDead;
 
 	/**
 	 * The list of actions each ship performs
@@ -89,7 +89,71 @@ public class Planner {
 	 * @param shipID	the UUID of ship
 	 */
 	public void formulatePlan(Toroidal2DPhysics space, UUID shipID) {
+		Ship ship = (Ship) space.getObjectById(shipID);
+		Node root = null; // Hold reference to root
 		
+		state.assignShipToResourceCount(ship.getId(), ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
+		emptyShipActionQueue(shipID);
+		
+		if(ASTEROID_GATHERING_PHASE) {
+			root = new Node(state); // Create a 'root' of the tree with state as initial state... Notice it will carry mutations of previous searches...
+			Node currentNode = root; // Hold reference to current node in search
+			while(!(currentNode.state.isGoalState())) {
+				// So consider each action in order of 'enum', which has it in priority... The search is DFS...
+				for(ActionEnum action : ActionEnum.values()) {
+					// Start by applying preconditions and checking state
+					if(action == ActionEnum.GET_FLAG) {
+						continue; // No flag gathering during 'Asteroid Gathering Phase'... A precondition
+					}
+					else if(action == ActionEnum.GET_ASTEROID && 
+							!(state.getNumberOfAssignedAsteroids() == WorldKnowledge.getMineableAsteroids(space).size())) { // Get asteroid
+						Asteroid closestAsteroid;
+						// Ship may get asteroid if it is NOT at full capacity and number of assigned asteroids is not exceeded
+						if(state.getResourceCount(shipID) < WorldKnowledge.RESOURCE_THRESHOLD) {
+							closestAsteroid = WorldKnowledge.getClosestAsteroid(space, ship, state); // Also applies precondition of unassigned asteroid...
+							if(closestAsteroid != null) { // Found an asteroid that was unassigned!
+								System.out.println("Assigning asteroid to ship!");
+								state.assignAsteroidToShip(space, shipID, closestAsteroid.getId()); // Mutate state by applying effect...
+								currentNode.edge = new Edge(new HighLevelAction(ActionEnum.GET_ASTEROID, closestAsteroid.getId()), new Node(currentNode, state));
+								currentNode = currentNode.edge.endNode;
+								break;
+							}
+						}
+					}
+					else if(action == ActionEnum.RETURN_TO_BASE) { // Return to base with resources
+						Base closestBase;
+						if(state.getResourceCount(shipID) >= WorldKnowledge.RESOURCE_THRESHOLD || 
+								state.getNumberOfAssignedAsteroids() == WorldKnowledge.getMineableAsteroids(space).size()) { // Got ship with full cargo
+							System.out.println("Return ship to base");
+							closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
+							state.assignBaseToShip(shipID, closestBase.getId()); // Mutate state by applying effect...
+							currentNode.edge = new Edge(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()), new Node(currentNode, state));
+							currentNode = currentNode.edge.endNode;
+							break;
+						}
+					}
+					else {
+						continue; // Other actions will not be considered as guided by the precondition of being in asteroid gathering phase
+					}
+				}
+			}	
+		}
+		
+		System.out.println("Exit Search Loop");
+		
+		Node currentNode = root;
+		
+		System.out.println("------------------------------------------------------");
+		System.out.println(shipID + " ---> " + currentNode.edge.edgeValue.actionType + " : " + currentNode.edge.edgeValue.goalObject);
+		while(currentNode != null && currentNode.edge != null && currentNode.edge.endNode != null) {
+			currentNode = currentNode.edge.endNode;
+			if(currentNode.edge != null) {
+				System.out.println(shipID + " ---> " + currentNode.edge.edgeValue.actionType + " : " + currentNode.edge.edgeValue.goalObject);
+			}
+		}
+		System.out.println("------------------------------------------------------");
+		
+		/*
 		if(ASTEROID_GATHERING_PHASE) { // Get enough asteroids in order to optimize flag gathering
 			asteroidGathering(space, shipID);
 		}
@@ -178,6 +242,7 @@ public class Planner {
 				asteroidGathering(space, shipID);
 			}
 		}
+		*/
 	}
 	
 	/**
@@ -321,7 +386,7 @@ public class Planner {
 					shipToActionQueue.get(shipID).remove();
 					
 					if(!(WorldKnowledge.getOtherTeamFlag(space).isAlive())) { // Means we need to replan flag carriers
-						isFlagWasDead = true;
+						isFlagDead = true;
 					}
 					
 					formulatePlan(space, shipID);
@@ -360,7 +425,7 @@ public class Planner {
 	 * @param space
 	 */
 	public void checkReplanFlagCarriers(Toroidal2DPhysics space) {
-		if(isFlagWasDead && !(ASTEROID_GATHERING_PHASE)) {
+		if(isFlagDead && !(ASTEROID_GATHERING_PHASE)) {
 			if(WorldKnowledge.getOtherTeamFlag(space).isAlive()) { // So flag has repawned... Now we can replan
 				if(state.getFlagCarrierOneID() != null) {
 					formulatePlan(space, state.getFlagCarrierOneID());
@@ -369,7 +434,7 @@ public class Planner {
 				if(state.getFlagCarrierTwoID() != null) {
 					formulatePlan(space, state.getFlagCarrierTwoID());
 				}
-				isFlagWasDead = false;
+				isFlagDead = false;
 			}
 		}
 	}
@@ -549,6 +614,107 @@ public class Planner {
 			actionType = action;
 			goalObject = null;
 			goalPosition = goal;
+		}
+	}
+	
+	/**
+	 * Since the planner employs a search... We will need 
+	 * a node implmentation
+	 *
+	 */
+	public class Node {
+		
+		/**
+		 * Reference to parent
+		 */
+		public Node parent;
+		
+		/**
+		 * The state contained in the node... 
+		 * It will allow algoirthm to check for goal state...
+		 */
+		public StateRepresentation state;
+		
+		/**
+		 * Connects action to next node
+		 */
+		public Edge edge;
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param p	the parent
+		 * @param s	the state
+		 * @param e	the edge
+		 */
+		public Node(Node p, StateRepresentation s, Edge e) {
+			parent = p;
+			state = s;
+			edge = e;
+		}
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param p	the parent
+		 * @param s	the state
+		 */
+		public Node(Node p, StateRepresentation s) {
+			parent = p;
+			state = s;
+			edge = null;
+		}
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param s	the state
+		 * @param e	the edge
+		 */
+		public Node(StateRepresentation s, Edge e) {
+			parent = null;
+			state = s;
+			edge = e;
+		}
+		
+		/**
+		 * Basic constructor 
+		 * 
+		 * @param s	the state
+		 */
+		public Node(StateRepresentation s) {
+			parent = null;
+			state = s;
+			edge = null;
+		}
+	}
+	
+	/**
+	 * Represents edge that will connect the nodes...
+	 * Essentially the action...
+	 *
+	 */
+	public class Edge {
+		
+		/**
+		 * The high level action that connects nodes
+		 */
+		public HighLevelAction edgeValue;
+		
+		/**
+		 * The node that is connected by the edge
+		 */
+		public Node endNode;
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param v	the edge value
+		 * @param n	the node connected at end of node
+		 */
+		public Edge(HighLevelAction v, Node n) {
+			edgeValue = v;
+			endNode = n;
 		}
 	}
 }
