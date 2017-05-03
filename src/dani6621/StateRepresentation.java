@@ -104,6 +104,11 @@ public class StateRepresentation {
 	private int lastTotalFlags;
 	
 	/**
+	 * Tracks what ship is carrying the flag...
+	 */
+	private UUID currentFlagCarrier;
+	
+	/**
 	 * Data structure will store ship to navigator
 	 */
 	private HashMap<UUID, Navigator> shipToNavigator;
@@ -232,7 +237,9 @@ public class StateRepresentation {
 	 */
 	public void assignBaseToShip(UUID shipID, UUID baseID) {
 		baseToShip.put(baseID, shipID);
-		totalResources += shipToResourceCount.get(shipID); // Add ship resource in cargo to total
+		if(shipToResourceCount.get(shipID) != null) {
+			totalResources += shipToResourceCount.get(shipID); // Add ship resource in cargo to total
+		}
 		shipToResourceCount.put(shipID, 0); // Returning to base empties resources
 	}
 	
@@ -346,6 +353,10 @@ public class StateRepresentation {
 		asteroidToShip.clear();
 		beaconToShip.clear();
 		baseToShip.clear();
+		totalResources = 0;
+		lastTotalResources = 0;
+		totalFlags = 0;
+		lastTotalFlags = 0;
 		
 		// Clear navigator for each ship
 		for(UUID shipID : shipToNavigator.keySet()) {
@@ -487,22 +498,45 @@ public class StateRepresentation {
 	 * Function determines if the <code>StateRepresentation</code> is
 	 * in a goal state. This will help to determine if a search can stop...
 	 *
+	 * @param space	a reference to space
 	 * @return	a boolean result if the state is in a particular goal state
 	 */
-	public boolean isGoalState() {
+	public boolean isGoalState(Toroidal2DPhysics space) {
 		boolean result = false;
 		
-		if(totalResources > lastTotalResources) { // An effect has given us more resources... This is a goal state!
-			System.out.println("More resources goal accompolished!");
+		if(totalResources > lastTotalResources || 
+				getNumberOfAssignedAsteroids() >= WorldKnowledge.getMineableAsteroids(space).size()) { // An effect has given us more resources or no more asteroids
 			lastTotalResources = totalResources;
 			result = true;
 		}
-		else if(totalFlags > lastTotalFlags) {
-			System.out.println("More flags goal accompolished!");
+		else if(totalFlags > lastTotalFlags && currentFlagCarrier == null) {
 			lastTotalFlags = totalFlags;
 			result = true;
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * 
+	 * @param value
+	 */
+	public void setCurrentFlagCarrier(UUID value) {
+		currentFlagCarrier = value;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public UUID getCurrentFlagCarrier() {
+		return currentFlagCarrier;
+	}
+	
+	/**
+	 * 
+	 */
+	public void incrementTotalFlag() {
+		++totalFlags;
 	}
 } 

@@ -40,7 +40,7 @@ public class WorldKnowledge {
 	/**
 	 * Signifies if ship is close enough to location to build a base
 	 */
-	public static final double BASE_BUILD_THRESHOLD = 15.0;
+	public static final double BASE_BUILD_THRESHOLD = 30.0;
 
 	/**
 	 * Threshold for refuel
