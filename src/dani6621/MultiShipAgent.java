@@ -89,7 +89,7 @@ public class MultiShipAgent extends TeamClient {
 			System.out.println("Performing Initialization");
 			WorldKnowledge.setTeamName(TEAM_NAME);
 			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
-				state.assignShipToNavigator(ship.getId(), new Navigator(DEBUG_MODE));
+				planner.assignShipToNavigator(ship.getId(), new Navigator(DEBUG_MODE));
 				planner.assignShipToActionQueue(ship.getId());
 			}
 			state.assignBaseBuildingLocations(space, WorldKnowledge.getOtherTeamFlag(space));
@@ -98,8 +98,8 @@ public class MultiShipAgent extends TeamClient {
 		
 		if(BOUGHT_SHIP) { // When ship is bought it must be assigned a navigator and action queue
 			for(Ship ship : WorldKnowledge.getTeamShips(space)) {
-				if(!(state.shipAssignedNavigator(ship))) {
-					state.assignShipToNavigator(ship.getId(), new Navigator(DEBUG_MODE));
+				if(!(planner.shipAssignedNavigator(ship))) {
+					planner.assignShipToNavigator(ship.getId(), new Navigator(DEBUG_MODE));
 					planner.assignShipToActionQueue(ship.getId());
 				}
 			}

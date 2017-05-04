@@ -2,14 +2,10 @@ package dani6621;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
-import spacesettlers.actions.AbstractAction;
-import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Asteroid;
 import spacesettlers.objects.Flag;
-import spacesettlers.objects.Ship;
 import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
 
@@ -114,11 +110,6 @@ public class StateRepresentation {
 	private UUID currentFlagCarrier;
 	
 	/**
-	 * Data structure will store ship to navigator
-	 */
-	private HashMap<UUID, Navigator> shipToNavigator;
-	
-	/**
 	 * Initialize the state representation with empty
 	 * values
 	 */
@@ -135,7 +126,7 @@ public class StateRepresentation {
 		lastTotalResources = 0;
 		totalFlags = 0;
 		lastTotalFlags = 0;
-		shipToNavigator = new HashMap<UUID, Navigator>();
+		// shipToNavigator = new HashMap<UUID, Navigator>();
 	}
 	
 	/**
@@ -157,7 +148,7 @@ public class StateRepresentation {
 		lastTotalResources = state.lastTotalResources;
 		totalFlags = state.totalFlags;
 		lastTotalFlags = state.lastTotalFlags;
-		shipToNavigator = new HashMap<UUID, Navigator>(state.shipToNavigator);
+		// shipToNavigator = new HashMap<UUID, Navigator>(state.shipToNavigator);
 	}
 	
 	/**
@@ -324,60 +315,6 @@ public class StateRepresentation {
 	}
 	
 	/**
-	 * Assigns a navigator to ship
-	 * 
-	 * @param shipID	the ship ID to assign a navigator
-	 * @param navigator	the navigator assigned to ship
-	 */
-	public void assignShipToNavigator(UUID shipID, Navigator navigator) {
-		shipToNavigator.put(shipID, navigator);
-	}
-	
-	/**
-	 * Function will detect if ship has navigator assigned to it
-	 * @param ship	the ship that wil be checked
-	 * @return	a boolean of the result
-	 */
-	public boolean shipAssignedNavigator(Ship ship) {
-		return shipToNavigator.containsKey(ship.getId());
-	}
-	
-	/**
-	 * Function will generate a path to goal for the given ship
-	 * 
-	 * @param space	a reference to the space
-	 * @param ship	the ship that requested the path
-	 * @param goal	the goal ship wants to reach
-	 * @param obstacles	the obstacles that could impede ship
-	 */
-	public void generateTeamMemberPath(Toroidal2DPhysics space, Ship ship, 
-			Position goal, Set<AbstractObject> obstacles) {
-		shipToNavigator.get(ship.getId()).generateAStarPath(space, ship, goal, obstacles);
-	}
-	
-	/**
-	 * Retrieves the action for the ship from the navigator
-	 * 
-	 * @param space	a reference to space
-	 * @param ship	the ship that needs the action
-	 * @param goal	the goal object the ship desires
-	 * @param obstacles	the obstacles that may impede ship
-	 * @param isLoiter	determines if ship should loiter at end location
-	 * @return	an action that gets ship closer to goal
-	 */
-	public AbstractAction getTeamMemberAction(Toroidal2DPhysics space, Ship ship, boolean isLoiter) {
-		AbstractAction action;
-		
-		if(isLoiter) {
-			action = shipToNavigator.get(ship.getId()).retrieveNavigationActionLoiter(space, ship);
-		}
-		else {
-			action = shipToNavigator.get(ship.getId()).retrieveNavigationAction(space, ship);
-		}
-		return action;
-	}
-	
-	/**
 	 * Clears all the mapping relations
 	 */
 	public void clear() {
@@ -388,11 +325,6 @@ public class StateRepresentation {
 		lastTotalResources = 0;
 		totalFlags = 0;
 		lastTotalFlags = 0;
-		
-		// Clear navigator for each ship
-		for(UUID shipID : shipToNavigator.keySet()) {
-			shipToNavigator.put(shipID, new Navigator(false)); // TODO: Put in way to pass debug setting
-		}
 	}
 	
 	/**
@@ -438,15 +370,15 @@ public class StateRepresentation {
 				System.out.println("Top-Right");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY());
 				convientBaseLocations[1] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY() + 550.0);
-				loiterLocations[0] = new Position(TOP_RIGHT.getX(), TOP_RIGHT.getY());
-				loiterLocations[1] = new Position(BOTTOM_RIGHT.getX(), BOTTOM_RIGHT.getY());
+				loiterLocations[0] = new Position(TOP_RIGHT.getX() + 35.0, TOP_RIGHT.getY());
+				loiterLocations[1] = new Position(BOTTOM_RIGHT.getX() + 35.0, BOTTOM_RIGHT.getY());
 			}
 			else { // Flag spawned bottom
 				System.out.println("Bottom-Right");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY() - 550.0);
 				convientBaseLocations[1] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY());
-				loiterLocations[0] = new Position(TOP_RIGHT.getX(), TOP_RIGHT.getY());
-				loiterLocations[1] = new Position(BOTTOM_RIGHT.getX(), BOTTOM_RIGHT.getY());
+				loiterLocations[0] = new Position(TOP_RIGHT.getX() + 35.0, TOP_RIGHT.getY());
+				loiterLocations[1] = new Position(BOTTOM_RIGHT.getX() + 35.0, BOTTOM_RIGHT.getY());
 			}
 		}
 		else { // Flag spawned on left side
@@ -454,15 +386,15 @@ public class StateRepresentation {
 				System.out.println("Top-Left");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY());
 				convientBaseLocations[1] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY() + 550.0);
-				loiterLocations[0] = new Position(TOP_LEFT.getX(), TOP_LEFT.getY());
-				loiterLocations[1] = new Position(BOTTOM_LEFT.getX(), BOTTOM_LEFT.getY());
+				loiterLocations[0] = new Position(TOP_LEFT.getX() - 35.0, TOP_LEFT.getY());
+				loiterLocations[1] = new Position(BOTTOM_LEFT.getX() - 35.0, BOTTOM_LEFT.getY());
 			}
 			else { // Flag spawned bottom
 				System.out.println("Bottom-Left");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY() - 550.0);
 				convientBaseLocations[1] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY());
-				loiterLocations[0] = new Position(TOP_LEFT.getX(), TOP_LEFT.getY());
-				loiterLocations[1] = new Position(BOTTOM_LEFT.getX(), BOTTOM_LEFT.getY());
+				loiterLocations[0] = new Position(TOP_LEFT.getX() - 35.0, TOP_LEFT.getY());
+				loiterLocations[1] = new Position(BOTTOM_LEFT.getX() - 35.0, BOTTOM_LEFT.getY());
 			}
 		}
 		System.out.println(convientBaseLocations[0].toString() + "     " + convientBaseLocations[1].toString());

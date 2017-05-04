@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
 
@@ -78,12 +79,18 @@ public class Planner {
 	private StateRepresentation state;
 	
 	/**
+	 * Data structure will store ship to navigator
+	 */
+	private HashMap<UUID, Navigator> shipToNavigator;
+	
+	/**
 	 * Basic constructor
 	 * @param teamInfo
 	 */
 	public Planner(StateRepresentation teamInfo) {
 		state = teamInfo;
-		shipToActionQueue = new HashMap<UUID, Queue<HighLevelAction>>(); 
+		shipToActionQueue = new HashMap<UUID, Queue<HighLevelAction>>();
+		shipToNavigator = new HashMap<UUID, Navigator>();
 	}
 	
 	/**
@@ -137,7 +144,7 @@ public class Planner {
 		
 		while(currentNode.parent != null) {
 			if(shipID.equals(state.getFlagCarrierOneID()) || shipID.equals(state.getFlagCarrierTwoID())) {
-				System.out.println(currentNode.edge.edgeValue.actionType);
+				// System.out.println(currentNode.edge.edgeValue.actionType);
 			}
 			((LinkedList<HighLevelAction>) shipToActionQueue.get(shipID)).addFirst(currentNode.edge.edgeValue);
 			currentNode = currentNode.parent;
@@ -190,37 +197,37 @@ public class Planner {
 			if(highLevelAction.actionType == ActionEnum.GET_ASTEROID) { // Need to get asteroid
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0 && goalObject != null) {
-					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
+					generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, false);
+				action = getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.RETURN_TO_BASE) { // Return to base
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
-					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship));
+					generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, false);
+				action = getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.GET_ENERGY) { // Got to get energy
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
-					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
+					generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, false);
+				action = getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.GET_FLAG) { // Getting a flag
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
-					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
+					generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, false);
+				action = getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.LOITER_AT_LOCATION) { // Just waiting around
 				goalPosition = highLevelAction.goalPosition;
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
-					state.generateTeamMemberPath(space, ship, goalPosition, WorldKnowledge.getAllObstacles(space, ship));
+					generateTeamMemberPath(space, ship, goalPosition, WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, true); // 'True' means target velocity is 0
+				action = getTeamMemberAction(space, ship, true); // 'True' means target velocity is 0
 			}
 		}
 		else {
@@ -399,6 +406,60 @@ public class Planner {
 	 */
 	public boolean getAsteroidGatheringPhase() {
 		return ASTEROID_GATHERING_PHASE;
+	}
+	
+	/**
+	 * Assigns a navigator to ship
+	 * 
+	 * @param shipID	the ship ID to assign a navigator
+	 * @param navigator	the navigator assigned to ship
+	 */
+	public void assignShipToNavigator(UUID shipID, Navigator navigator) {
+		shipToNavigator.put(shipID, navigator);
+	}
+	
+	/**
+	 * Function will detect if ship has navigator assigned to it
+	 * @param ship	the ship that wil be checked
+	 * @return	a boolean of the result
+	 */
+	public boolean shipAssignedNavigator(Ship ship) {
+		return shipToNavigator.containsKey(ship.getId());
+	}
+	
+	/**
+	 * Function will generate a path to goal for the given ship
+	 * 
+	 * @param space	a reference to the space
+	 * @param ship	the ship that requested the path
+	 * @param goal	the goal ship wants to reach
+	 * @param obstacles	the obstacles that could impede ship
+	 */
+	public void generateTeamMemberPath(Toroidal2DPhysics space, Ship ship, 
+			Position goal, Set<AbstractObject> obstacles) {
+		shipToNavigator.get(ship.getId()).generateAStarPath(space, ship, goal, obstacles);
+	}
+	
+	/**
+	 * Retrieves the action for the ship from the navigator
+	 * 
+	 * @param space	a reference to space
+	 * @param ship	the ship that needs the action
+	 * @param goal	the goal object the ship desires
+	 * @param obstacles	the obstacles that may impede ship
+	 * @param isLoiter	determines if ship should loiter at end location
+	 * @return	an action that gets ship closer to goal
+	 */
+	public AbstractAction getTeamMemberAction(Toroidal2DPhysics space, Ship ship, boolean isLoiter) {
+		AbstractAction action = new DoNothingAction();
+		
+		if(isLoiter) {
+			action = shipToNavigator.get(ship.getId()).retrieveNavigationActionLoiter(space, ship);
+		}
+		else {
+			action = shipToNavigator.get(ship.getId()).retrieveNavigationAction(space, ship);
+		}
+		return action;
 	}
 	
 	/**
