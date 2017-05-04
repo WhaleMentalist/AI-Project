@@ -51,6 +51,11 @@ public class StateRepresentation {
 	private Position[] convientBaseLocations;
 	
 	/**
+	 * Stores the location for loitering 
+	 */
+	private Position[] loiterLocations;
+	
+	/**
 	 * Stores the amount of resources in ship when executing instance
 	 * of a plan
 	 */
@@ -96,12 +101,12 @@ public class StateRepresentation {
 	/**
 	 * Stores the current number of flags as a result of an effect
 	 */
-	private int totalFlags;
+	public int totalFlags;
 	
 	/**
 	 * Stores the last number of flags as a result of an effect
 	 */
-	private int lastTotalFlags;
+	public int lastTotalFlags;
 	
 	/**
 	 * Tracks what ship is carrying the flag...
@@ -119,6 +124,7 @@ public class StateRepresentation {
 	 */
 	public StateRepresentation() {
 		convientBaseLocations = new Position[2];
+		loiterLocations = new Position[2];
 		shipToResourceCount = new HashMap<UUID, Integer>();
 		asteroidToShip = new HashMap<UUID, UUID>();
 		beaconToShip = new HashMap<UUID, UUID>();
@@ -133,18 +139,42 @@ public class StateRepresentation {
 	}
 	
 	/**
+	 * Copy constructor
 	 * 
-	 * @param shipID
-	 * @param resources
+	 * @param state	the state to create a copy 
+	 */
+	public StateRepresentation(StateRepresentation state) {
+		convientBaseLocations = state.convientBaseLocations;
+		loiterLocations = state.loiterLocations;
+		shipToResourceCount = new HashMap<UUID, Integer>(state.shipToResourceCount);
+		asteroidToShip = new HashMap<UUID, UUID>(state.asteroidToShip);
+		beaconToShip = new HashMap<UUID, UUID>(state.beaconToShip);
+		baseToShip = new HashMap<UUID, UUID>(state.baseToShip);
+		flagCarrierOneID = state.flagCarrierOneID;
+		flagCarrierTwoID = state.flagCarrierTwoID;
+		currentFlagCarrier = state.currentFlagCarrier;
+		totalResources = state.totalResources;
+		lastTotalResources = state.lastTotalResources;
+		totalFlags = state.totalFlags;
+		lastTotalFlags = state.lastTotalFlags;
+		shipToNavigator = new HashMap<UUID, Navigator>(state.shipToNavigator);
+	}
+	
+	/**
+	 * Function will assign ship to a number of resources
+	 * 	
+	 * @param shipID	the ID of ship to assign resources
+	 * @param resources	the number of resources ship will have
 	 */
 	public void assignShipToResourceCount(UUID shipID, int resources) {
 		shipToResourceCount.put(shipID, resources);
 	}
 	
 	/**
+	 * Get the number of resource the ship has
 	 * 
-	 * @param shipID
-	 * @return
+	 * @param shipID	the ID of ship to assign resources
+	 * @return	the number of resources
 	 */
 	public int getResourceCount(UUID shipID) {
 		return shipToResourceCount.get(shipID);
@@ -180,9 +210,10 @@ public class StateRepresentation {
 	}
 	
 	/**
+	 * Function checks if asteroid is assigned
 	 * 
-	 * @param asteroidID
-	 * @return
+	 * @param asteroidID	the asteroid to check
+	 * @return	a boolean of result
 	 */
 	public boolean isAsteroidAssigned(UUID asteroidID) {
 		return asteroidToShip.containsKey(asteroidID);
@@ -407,11 +438,15 @@ public class StateRepresentation {
 				System.out.println("Top-Right");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY());
 				convientBaseLocations[1] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY() + 550.0);
+				loiterLocations[0] = new Position(TOP_RIGHT.getX(), TOP_RIGHT.getY());
+				loiterLocations[1] = new Position(BOTTOM_RIGHT.getX(), BOTTOM_RIGHT.getY());
 			}
 			else { // Flag spawned bottom
 				System.out.println("Bottom-Right");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY() - 550.0);
 				convientBaseLocations[1] = new Position(flagSpawn.getX() + 100.0, flagSpawn.getY());
+				loiterLocations[0] = new Position(TOP_RIGHT.getX(), TOP_RIGHT.getY());
+				loiterLocations[1] = new Position(BOTTOM_RIGHT.getX(), BOTTOM_RIGHT.getY());
 			}
 		}
 		else { // Flag spawned on left side
@@ -419,11 +454,15 @@ public class StateRepresentation {
 				System.out.println("Top-Left");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY());
 				convientBaseLocations[1] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY() + 550.0);
+				loiterLocations[0] = new Position(TOP_LEFT.getX(), TOP_LEFT.getY());
+				loiterLocations[1] = new Position(BOTTOM_LEFT.getX(), BOTTOM_LEFT.getY());
 			}
 			else { // Flag spawned bottom
 				System.out.println("Bottom-Left");
 				convientBaseLocations[0] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY() - 550.0);
 				convientBaseLocations[1] = new Position(flagSpawn.getX() - 100.0, flagSpawn.getY());
+				loiterLocations[0] = new Position(TOP_LEFT.getX(), TOP_LEFT.getY());
+				loiterLocations[1] = new Position(BOTTOM_LEFT.getX(), BOTTOM_LEFT.getY());
 			}
 		}
 		System.out.println(convientBaseLocations[0].toString() + "     " + convientBaseLocations[1].toString());
@@ -436,6 +475,16 @@ public class StateRepresentation {
 	 */
 	public Position[] getConvientBaseBuildingLocations() {
 		return convientBaseLocations;
+	}
+	
+	/**
+	 * Function returns the list containing the loiter locations
+	 * for ships
+	 * 
+	 * @return	the positions of the loiter locations
+	 */
+	public Position[] getLoiterLocations() {
+		return loiterLocations;
 	}
 	
 	/**
@@ -509,7 +558,7 @@ public class StateRepresentation {
 			lastTotalResources = totalResources;
 			result = true;
 		}
-		else if(totalFlags > lastTotalFlags && currentFlagCarrier == null) {
+		else if(totalFlags > lastTotalFlags) { // More flags is a goal
 			lastTotalFlags = totalFlags;
 			result = true;
 		}

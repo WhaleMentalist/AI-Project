@@ -36,7 +36,7 @@ public class MultiShipAgent extends TeamClient {
 	/**
 	 * The amount of time before the multi-agent planner replans
 	 */
-	public static final int REPLAN_MULTIAGENT_ACTIONS = 300;
+	public static final int REPLAN_MULTIAGENT_ACTIONS = 150;
 	
 	/**
 	 * Flag the debug mode
