@@ -30,7 +30,7 @@ public class WorldKnowledge {
 	/**
 	 * Used as threshold for ship considering base as energy source
 	 */
-	public static final double SUFFICIENT_ENERGY = 1600;
+	public static final double SUFFICIENT_ENERGY = 1200;
 	
 	/**
 	 * Threshold for resource capacity
@@ -40,7 +40,7 @@ public class WorldKnowledge {
 	/**
 	 * Signifies if ship is close enough to location to build a base
 	 */
-	public static final double BASE_BUILD_THRESHOLD = 15.0;
+	public static final double BASE_BUILD_THRESHOLD = 45.0;
 
 	/**
 	 * Threshold for refuel

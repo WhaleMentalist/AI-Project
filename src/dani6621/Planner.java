@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
+import java.util.Stack;
 import java.util.UUID;
 
 import spacesettlers.actions.AbstractAction;
@@ -52,14 +54,19 @@ public class Planner {
 	 *
 	 */
 	public enum ActionEnum {
-		GET_FLAG, RETURN_TO_BASE, GET_ASTEROID,
-		GET_ENERGY, LOITER_AT_LOCATION;
+		GET_FLAG, GET_ASTEROID, RETURN_TO_BASE, 
+		LOITER_AT_LOCATION, GET_ENERGY;
 	}
 	
 	/**
-	 * 
+	 * Maximum allowable interations for DFS search
 	 */
-	private boolean isFlagWasDead;
+	private static int MAX_ITERATIONS = 50;
+	
+	/**
+	 * Flags when flag is dead to help reformulate plan when it spawns
+	 */
+	private boolean isFlagDead;
 
 	/**
 	 * The list of actions each ship performs
@@ -72,12 +79,18 @@ public class Planner {
 	private StateRepresentation state;
 	
 	/**
+	 * Data structure will store ship to navigator
+	 */
+	private HashMap<UUID, Navigator> shipToNavigator;
+	
+	/**
 	 * Basic constructor
 	 * @param teamInfo
 	 */
 	public Planner(StateRepresentation teamInfo) {
 		state = teamInfo;
-		shipToActionQueue = new HashMap<UUID, Queue<HighLevelAction>>(); 
+		shipToActionQueue = new HashMap<UUID, Queue<HighLevelAction>>();
+		shipToNavigator = new HashMap<UUID, Navigator>();
 	}
 	
 	/**
@@ -89,95 +102,55 @@ public class Planner {
 	 * @param shipID	the UUID of ship
 	 */
 	public void formulatePlan(Toroidal2DPhysics space, UUID shipID) {
+		Ship ship = (Ship) space.getObjectById(shipID);
+		PlanSearchNode root = null; // Hold reference to root
+		PlanSearchNode currentNode = null; // Hold reference to current node
 		
-		if(ASTEROID_GATHERING_PHASE) { // Get enough asteroids in order to optimize flag gathering
-			asteroidGathering(space, shipID);
+		// System.out.println("-----------------------------------------");
+		
+		state.assignShipToResourceCount(ship.getId(), ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
+		emptyShipActionQueue(shipID);
+		
+		if(ASTEROID_GATHERING_PHASE) { // Gather asteroids to get items that optimize flag gathering
+			root = new PlanSearchNode(state); // Create a 'root' of the tree with state as initial state...
+			currentNode = asteroidGathering(space, shipID, root); // Hold reference to current node in search
 		}
-		else {
+		else { // Flag gathering phase
 			// Where we assign flag gathering and base building to optimize flag count
 			if(state.getFlagCarrierOneID() == null) { // Need to give state flag carrier ID
-				Ship ship = WorldKnowledge.getFlagCarrier(space, state);
-				
+				Ship flagCarrier = WorldKnowledge.getFlagCarrier(space, state);
 				if(ship != null) { // Check if a ship was found, otherwise just skip until next timestep and check again
-					state.assignFlagCarrierOneID(ship.getId());
+					state.assignFlagCarrierOneID(flagCarrier.getId());
 				}
 			}
-			
+									
 			// Need to assign second flag carrier
 			if(state.getFlagCarrierTwoID() == null) {
-				Ship ship = WorldKnowledge.getFlagCarrier(space, state);
-				
+				Ship flagCarrier = WorldKnowledge.getFlagCarrier(space, state);
 				if(ship != null) {
-					state.assignFlagCarrierTwo(ship.getId());
+					state.assignFlagCarrierTwo(flagCarrier.getId());
 				}
 			}
 			
-			Ship ship = (Ship) space.getObjectById(shipID);
-			state.assignShipToResourceCount(ship.getId(), 
-					ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
-			emptyShipActionQueue(shipID);
+			root = new PlanSearchNode(state); // Create a 'root' of the tree with state as initial state... 
 			
-			// Low energy state...
-			if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Need to attain energy as priority in plan
-				AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, state);
-				
-				if(energySource != null) {
-					if(energySource instanceof Base) { // Base Type
-						state.assignBaseToShip(shipID, energySource.getId());
-						shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
-					}
-					else { // Beacon Type
-						state.assignBeaconToShip(shipID, energySource.getId());
-						shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
-					}
-				}
+			if(ship.isCarryingFlag() || shipID.equals(state.getFlagCarrierOneID()) || shipID.equals(state.getFlagCarrierTwoID())) { // Flag carriers
+				currentNode = flagGathering(space, shipID, root);
 			}
-			
-			if(!(ship.isCarryingFlag()) && (shipID.equals(state.getFlagCarrierOneID()) || shipID.equals(state.getFlagCarrierTwoID()))) { // So if we have flag carrier not carrying flag
-				Flag flag = WorldKnowledge.getOtherTeamFlag(space);
-				
-				int closestToFlag = closestToFlag(space);
-				
-				if(closestToFlag == 0 && shipID.equals(state.getFlagCarrierOneID())) { // Closer to top spawn position
-					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_FLAG, flag.getId()));
-					
-					Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, flag.getPosition()); // Get base to return to...
-					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
-					state.assignBaseToShip(closestBase.getId(), ship.getId());
-				}
-				else if(closestToFlag == 1 && shipID.equals(state.getFlagCarrierTwoID())) { // Closer to bottom spawn
-					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_FLAG, flag.getId()));
-					
-					Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, flag.getPosition()); // Get base to return to...
-					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
-					state.assignBaseToShip(closestBase.getId(), ship.getId());
-				}
-				else if(ship.isCarryingFlag()) {
-					Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
-					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
-					state.assignBaseToShip(closestBase.getId(), ship.getId());
-				}
-				else { // Not closest... We need to have it loiter
-					if(shipID.equals(state.getFlagCarrierOneID())) { // Loiter at top spawn
-						shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, 
-								state.getConvientBaseBuildingLocations()[0]));
-					}
-					else { // Loiter at bottom spawn
-						shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, 
-								state.getConvientBaseBuildingLocations()[1]));
-					}
-				}
-				
-			}
-			else if(ship.isCarryingFlag()) {
-				Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
-				shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
-				state.assignBaseToShip(closestBase.getId(), ship.getId());
-			}
-			else if(!(shipID.equals(state.getFlagCarrierOneID()) && !(shipID.equals(state.getFlagCarrierTwoID())))){ // Just do asteroid gathering as usual...
-				asteroidGathering(space, shipID);
+			else { // Non-flag carrier
+				currentNode = asteroidGathering(space, shipID, root); // Hold reference to current node in search
 			}
 		}
+		
+		while(currentNode.parent != null) {
+			if(shipID.equals(state.getFlagCarrierOneID()) || shipID.equals(state.getFlagCarrierTwoID())) {
+				// System.out.println(currentNode.edge.edgeValue.actionType);
+			}
+			((LinkedList<HighLevelAction>) shipToActionQueue.get(shipID)).addFirst(currentNode.edge.edgeValue);
+			currentNode = currentNode.parent;
+		}
+		
+		// System.out.println("-----------------------------------------");
 	}
 	
 	/**
@@ -224,38 +197,41 @@ public class Planner {
 			if(highLevelAction.actionType == ActionEnum.GET_ASTEROID) { // Need to get asteroid
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0 && goalObject != null) {
-					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
+					generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, false);
+				action = getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.RETURN_TO_BASE) { // Return to base
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
-					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship));
+					generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstaclesExceptTeamBases(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, false);
+				action = getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.GET_ENERGY) { // Got to get energy
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
-					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
+					generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, false);
+				action = getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.GET_FLAG) { // Getting a flag
 				goalObject = space.getObjectById(highLevelAction.goalObject);
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
-					state.generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
+					generateTeamMemberPath(space, ship, goalObject.getPosition(), WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, false);
+				action = getTeamMemberAction(space, ship, false);
 			}
 			else if(highLevelAction.actionType == ActionEnum.LOITER_AT_LOCATION) { // Just waiting around
 				goalPosition = highLevelAction.goalPosition;
 				if(space.getCurrentTimestep() % MultiShipAgent.NAVIGATION_REPLAN_TIMESTEP == 0) {
-					state.generateTeamMemberPath(space, ship, goalPosition, WorldKnowledge.getAllObstacles(space, ship));
+					generateTeamMemberPath(space, ship, goalPosition, WorldKnowledge.getAllObstacles(space, ship));
 				}
-				action = state.getTeamMemberAction(space, ship, true);
+				action = getTeamMemberAction(space, ship, true); // 'True' means target velocity is 0
 			}
+		}
+		else {
+			formulatePlan(space, shipID); // Need to create a new plan since we ran out of actions
 		}
 		
 		return action;
@@ -321,7 +297,7 @@ public class Planner {
 					shipToActionQueue.get(shipID).remove();
 					
 					if(!(WorldKnowledge.getOtherTeamFlag(space).isAlive())) { // Means we need to replan flag carriers
-						isFlagWasDead = true;
+						isFlagDead = true;
 					}
 					
 					formulatePlan(space, shipID);
@@ -341,7 +317,7 @@ public class Planner {
 				}
 				else { // Beacon Type
 					if((ship == null || !(ship.isAlive())) || energySource == null || !(energySource.isAlive())) {
-						state.unassignBeaconToShip(energySource.getId());
+						state.unassignBeaconToShip(action.goalObject);
 						shipToActionQueue.get(shipID).remove();
 					}
 				}
@@ -360,7 +336,7 @@ public class Planner {
 	 * @param space
 	 */
 	public void checkReplanFlagCarriers(Toroidal2DPhysics space) {
-		if(isFlagWasDead && !(ASTEROID_GATHERING_PHASE)) {
+		if(isFlagDead && !(ASTEROID_GATHERING_PHASE)) {
 			if(WorldKnowledge.getOtherTeamFlag(space).isAlive()) { // So flag has repawned... Now we can replan
 				if(state.getFlagCarrierOneID() != null) {
 					formulatePlan(space, state.getFlagCarrierOneID());
@@ -369,7 +345,7 @@ public class Planner {
 				if(state.getFlagCarrierTwoID() != null) {
 					formulatePlan(space, state.getFlagCarrierTwoID());
 				}
-				isFlagWasDead = false;
+				isFlagDead = false;
 			}
 		}
 	}
@@ -433,71 +409,369 @@ public class Planner {
 	}
 	
 	/**
+	 * Assigns a navigator to ship
+	 * 
+	 * @param shipID	the ship ID to assign a navigator
+	 * @param navigator	the navigator assigned to ship
+	 */
+	public void assignShipToNavigator(UUID shipID, Navigator navigator) {
+		shipToNavigator.put(shipID, navigator);
+	}
+	
+	/**
+	 * Function will detect if ship has navigator assigned to it
+	 * @param ship	the ship that wil be checked
+	 * @return	a boolean of the result
+	 */
+	public boolean shipAssignedNavigator(Ship ship) {
+		return shipToNavigator.containsKey(ship.getId());
+	}
+	
+	/**
+	 * Function will generate a path to goal for the given ship
+	 * 
+	 * @param space	a reference to the space
+	 * @param ship	the ship that requested the path
+	 * @param goal	the goal ship wants to reach
+	 * @param obstacles	the obstacles that could impede ship
+	 */
+	public void generateTeamMemberPath(Toroidal2DPhysics space, Ship ship, 
+			Position goal, Set<AbstractObject> obstacles) {
+		shipToNavigator.get(ship.getId()).generateAStarPath(space, ship, goal, obstacles);
+	}
+	
+	/**
+	 * Retrieves the action for the ship from the navigator
+	 * 
+	 * @param space	a reference to space
+	 * @param ship	the ship that needs the action
+	 * @param goal	the goal object the ship desires
+	 * @param obstacles	the obstacles that may impede ship
+	 * @param isLoiter	determines if ship should loiter at end location
+	 * @return	an action that gets ship closer to goal
+	 */
+	public AbstractAction getTeamMemberAction(Toroidal2DPhysics space, Ship ship, boolean isLoiter) {
+		AbstractAction action = new DoNothingAction();
+		
+		if(isLoiter) {
+			action = shipToNavigator.get(ship.getId()).retrieveNavigationActionLoiter(space, ship);
+		}
+		else {
+			action = shipToNavigator.get(ship.getId()).retrieveNavigationAction(space, ship);
+		}
+		return action;
+	}
+	
+	/**
+	 * Helper function that will assign ship to a flag gathering plan
+	 * 
+	 * @param space	a reference to space
+	 * @param shipID	ID of the ship that will be assigned plan
+	 * @param root	the root of the search tree
+	 * @return	a goal node that allows recurivly reconstruct action plan
+	 */
+	private PlanSearchNode flagGathering(Toroidal2DPhysics space, UUID shipID, PlanSearchNode root) {
+		int iterations = 0;
+		StateRepresentation stateCopy;
+		PlanSearchNode currentNode;
+		Ship ship = (Ship) space.getObjectById(shipID);
+		Flag otherTeamFlag = WorldKnowledge.getOtherTeamFlag(space);
+		Stack<PlanSearchNode> frontier = new Stack<PlanSearchNode>();
+		frontier.push(root);
+		
+		while(iterations < MAX_ITERATIONS) {
+			++iterations;
+			
+			if(frontier.isEmpty()) {
+				// System.out.println("Frontier is empty..."); // No solution found... Something odd happened
+				return new PlanSearchNode(root, state, 
+						new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, ship.getPosition())));
+			}
+			
+			currentNode = frontier.pop();
+			
+			if(currentNode != null) {
+				// System.out.println("Parent copy");
+				stateCopy = new StateRepresentation(currentNode.internalState);
+			}
+			else {
+				// System.out.println("Root copy");
+				stateCopy = new StateRepresentation(state);
+			}
+			
+			if(currentNode.internalState.isGoalState(space) || (currentNode.edge != null && 
+					(currentNode.edge.edgeValue.actionType == ActionEnum.LOITER_AT_LOCATION || 
+					currentNode.edge.edgeValue.actionType == ActionEnum.GET_ENERGY))) {
+				state = currentNode.internalState; // Set state to goal state for other ships to plan actions to
+				return currentNode;
+			}
+			
+			for(ActionEnum action : ActionEnum.values()) {
+				if(action == ActionEnum.GET_FLAG) { 
+					if(isClosestToFlag(space, shipID) && stateCopy.getCurrentFlagCarrier() == null) { // Check preconditions...
+						// System.out.println("Getting flag action...");
+						StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+						ownCopy.setCurrentFlagCarrier(shipID); // Mutate for effects of action
+						frontier.push(new PlanSearchNode(currentNode, ownCopy, 
+								new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_FLAG, otherTeamFlag.getId()))));
+						break;
+					}
+				}
+				else if(action == ActionEnum.RETURN_TO_BASE) {
+					if(shipID.equals(stateCopy.getCurrentFlagCarrier()) || ship.isCarryingFlag()) {
+						// System.out.println("Return to base action...");
+						Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
+						StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+						ownCopy.incrementTotalFlag();
+						ownCopy.setCurrentFlagCarrier(null);
+						frontier.push(new PlanSearchNode(currentNode, ownCopy, 
+								new PlanSearchEdge(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()))));
+						break;
+					}
+				}
+				else if(action == ActionEnum.LOITER_AT_LOCATION) {
+					if(!(isClosestToFlag(space, shipID)) && !(shipID.equals(stateCopy.getCurrentFlagCarrier())) || otherTeamFlag.isBeingCarried()) {
+						// System.out.println("Loiter action...");
+						if(shipID.equals(stateCopy.getFlagCarrierOneID())) {
+							StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+							frontier.push(new PlanSearchNode(currentNode, ownCopy, 
+									new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, stateCopy.getLoiterLocations()[0]))));
+						}
+						else {
+							StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+							frontier.push(new PlanSearchNode(currentNode, ownCopy, 
+									new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, stateCopy.getLoiterLocations()[1]))));
+						}
+					}
+				}
+			}
+		}
+		
+		return new PlanSearchNode(root, state, 
+				new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, ship.getPosition())));
+	}
+	
+	/**
 	 * Helper function that will assign ship to a asteroid gathering plan
 	 * 
 	 * @param space	a reference to space
-	 * @param shipID	ID of ship that will be assigned plan
+	 * @param shipID	ID of the ship that will be assigned plan
+	 * @param root	the root of the search tree
+	 * @return	a goal node that allows recurivly reconstruct action plan
 	 */
-	private void asteroidGathering(Toroidal2DPhysics space, UUID shipID) {
+	private PlanSearchNode asteroidGathering(Toroidal2DPhysics space, UUID shipID, PlanSearchNode root) {
+		int iterations = 0;
+		StateRepresentation stateCopy;
+		PlanSearchNode currentNode;
 		Ship ship = (Ship) space.getObjectById(shipID);
-		state.assignShipToResourceCount(ship.getId(), ship.getResources().getTotal()); // Initialize intial resource count to ship current cargo state
-		emptyShipActionQueue(shipID);
+		Stack<PlanSearchNode> frontier = new Stack<PlanSearchNode>();
+		frontier.push(root);
 		
-		if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) { // Need to attain energy as priority in plan
-			AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, state);
+		while(iterations < MAX_ITERATIONS) {
+			++iterations;
+			if(frontier.isEmpty()) {
+				// System.out.println("Frontier is empty..."); // No solution found... Something odd happened
+				return new PlanSearchNode(root, state, 
+						new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, ship.getPosition())));
+			}
 			
-			if(energySource != null) {
-				if(energySource instanceof Base) { // Base Type
-					state.assignBaseToShip(shipID, energySource.getId());
-					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
+			currentNode = frontier.pop();
+			
+			if(currentNode != null) {
+				// System.out.println("Parent copy");
+				stateCopy = new StateRepresentation(currentNode.internalState);
+			}
+			else {
+				// System.out.println("Root copy");
+				stateCopy = new StateRepresentation(state);
+			}
+			
+			if(currentNode.internalState.isGoalState(space)) {
+				state = currentNode.internalState; // Set state to goal state for other ships to plan actions to
+				return currentNode;
+			}
+			
+			for(ActionEnum action : ActionEnum.values()) {
+				if(action == ActionEnum.GET_ASTEROID) {
+					if(stateCopy.getNumberOfAssignedAsteroids() < WorldKnowledge.getMineableAsteroids(space).size() &&
+							ship.getEnergy() >= WorldKnowledge.ENERGY_THRESHOLD &&
+							!(ship.isCarryingFlag()) &&
+							stateCopy.getResourceCount(shipID) < WorldKnowledge.RESOURCE_THRESHOLD) {
+						Asteroid closestAsteroid = WorldKnowledge.getClosestAsteroid(space, ship, stateCopy);
+						if(closestAsteroid != null) {
+							StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+							// System.out.println("Asteroid action...");
+							ownCopy.assignAsteroidToShip(space, shipID, closestAsteroid.getId());
+							frontier.push(new PlanSearchNode(currentNode, ownCopy, 
+									new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_ASTEROID, 
+											closestAsteroid.getId()))));
+						}
+					}
 				}
-				else { // Beacon Type
-					state.assignBeaconToShip(shipID, energySource.getId());
-					shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()));
+				else if(action == ActionEnum.RETURN_TO_BASE) {
+					if(stateCopy.getResourceCount(shipID) >= WorldKnowledge.RESOURCE_THRESHOLD || 
+							ship.isCarryingFlag() ||
+							(stateCopy.getNumberOfAssignedAsteroids() >= WorldKnowledge.getMineableAsteroids(space).size() &&
+							stateCopy.getResourceCount(shipID) > 0 &&
+							ship.getEnergy() >= WorldKnowledge.ENERGY_THRESHOLD)) {
+						Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
+						StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+						// System.out.println("Return to base action...");
+						ownCopy.assignBaseToShip(shipID, closestBase.getId());
+						frontier.push(new PlanSearchNode(currentNode, ownCopy, 
+								new PlanSearchEdge(new HighLevelAction(ActionEnum.RETURN_TO_BASE,
+										closestBase.getId()))));
+					}
+				}
+				else if(action == ActionEnum.LOITER_AT_LOCATION) {
+					if(ship.getEnergy() >= WorldKnowledge.ENERGY_THRESHOLD &&
+							stateCopy.getNumberOfAssignedAsteroids() >= WorldKnowledge.getMineableAsteroids(space).size()) {
+						StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+						// System.out.println("Loiter action...");
+						frontier.push(new PlanSearchNode(currentNode, ownCopy, 
+								new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION,
+										ship.getPosition()))));
+					}
+				}
+				else if(action == ActionEnum.GET_ENERGY) {
+					if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD) {
+						AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, stateCopy);
+						if(energySource != null) {
+							// System.out.println("Get Energy Action...");
+
+							if(energySource instanceof Base) { // Base Type
+								StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+								stateCopy.assignBaseToShip(shipID, energySource.getId());
+								frontier.push(new PlanSearchNode(currentNode, ownCopy,
+										new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_ENERGY, 
+												energySource.getId()))));
+							}
+							else { // Beacon Type
+								StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+								stateCopy.assignBeaconToShip(shipID, energySource.getId());
+								frontier.push(new PlanSearchNode(currentNode, ownCopy,
+										new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_ENERGY, 
+												energySource.getId()))));
+							}
+						}
+					}
 				}
 			}
 		}
 		
-		Asteroid closestAsteroid;
-		// Check if ship can get full cargo and also check if there are more asteroids to even assign...
-		while((ship.getResources().getTotal() < WorldKnowledge.RESOURCE_THRESHOLD 
-			&& state.getResourceCount(shipID) < WorldKnowledge.RESOURCE_THRESHOLD) 
-			&& state.getNumberOfAssignedAsteroids() < WorldKnowledge.getMineableAsteroids(space).size()) {
-			closestAsteroid = WorldKnowledge.getClosestAsteroid(space, ship, state); // Applies preconditions...
-			if(closestAsteroid != null) {
-				state.assignAsteroidToShip(space, shipID, closestAsteroid.getId()); // Applies affect... Mutate state
-				shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.GET_ASTEROID, closestAsteroid.getId())); // Puts in action... 
+		/*
+		while(!(root.state.isGoalState(space))) {
+			if(root.parent != null && (root.parent.edge.edgeValue.actionType == ActionEnum.GET_ENERGY || 
+					root.parent.edge.edgeValue.actionType == ActionEnum.LOITER_AT_LOCATION)) {
+				break;
 			}
-			else { // Could be a lot of ships, but very little amount of asteroids...
-				break; // Means we have run out of asteroids
+			
+			// So consider each action in order of 'enum', which has it in priority... The search is DFS...
+			for(ActionEnum action : ActionEnum.values()) {
+				// Start by applying preconditions and checking state
+				if(action == ActionEnum.GET_FLAG) {
+					continue; // No flag gathering during 'Asteroid Gathering Phase'... A precondition
+				}
+				else if(action == ActionEnum.GET_ASTEROID && 
+						(state.getNumberOfAssignedAsteroids() < WorldKnowledge.getMineableAsteroids(space).size() &&
+						ship.getEnergy() >= WorldKnowledge.ENERGY_THRESHOLD && 
+						!(ship.isCarryingFlag()))) { // Get asteroid
+					Asteroid closestAsteroid;
+					// Ship may get asteroid if it is NOT at full capacity and number of assigned asteroids is not exceeded
+					if(state.getResourceCount(shipID) < WorldKnowledge.RESOURCE_THRESHOLD) {
+						System.out.println("Asteroid Action...");
+						closestAsteroid = WorldKnowledge.getClosestAsteroid(space, ship, state); // Also applies precondition of unassigned asteroid...
+						if(closestAsteroid != null) { // Found an asteroid that was unassigned!
+							state.assignAsteroidToShip(space, shipID, closestAsteroid.getId()); // Mutate state by applying effect...
+							root.edge = new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_ASTEROID, closestAsteroid.getId()), new PlanSearchNode(root, state));
+							root = root.edge.endNode;
+							frontier.push(root);
+							continue;
+						}
+					}
+				}
+				else if(action == ActionEnum.RETURN_TO_BASE) { // Return to base with resources
+					Base closestBase;
+					if((state.getResourceCount(shipID) >= WorldKnowledge.RESOURCE_THRESHOLD || ship.isCarryingFlag()) ||
+							(state.getNumberOfAssignedAsteroids() >= WorldKnowledge.getMineableAsteroids(space).size() &&
+							state.getResourceCount(shipID) > 0) && ship.getEnergy() >= WorldKnowledge.ENERGY_THRESHOLD) { // Got ship with full cargo
+						System.out.println("Return Base Action...");
+						closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
+						state.assignBaseToShip(shipID, closestBase.getId()); // Mutate state by applying effect...
+						root.edge = new PlanSearchEdge(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()), new PlanSearchNode(root, state));
+						root = root.edge.endNode;
+						frontier.push(root);
+						continue;
+					}
+				}
+				else if(action == ActionEnum.LOITER_AT_LOCATION) {
+					if(ship.getEnergy() >= WorldKnowledge.ENERGY_THRESHOLD && 
+							state.getNumberOfAssignedAsteroids() >= WorldKnowledge.getMineableAsteroids(space).size()) {
+						System.out.println("Loiter Action...");
+						root.edge = new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, ship.getPosition()), 
+								new PlanSearchNode(root, state));
+						root = root.edge.endNode;
+						frontier.push(root);
+						continue;
+					}
+				}
+				else if(action == ActionEnum.GET_ENERGY) {
+					if(ship.getEnergy() < WorldKnowledge.ENERGY_THRESHOLD || 
+							(state.getNumberOfAssignedAsteroids() >= WorldKnowledge.getMineableAsteroids(space).size())) {
+						AbstractObject energySource = WorldKnowledge.getClosestEnergySource(space, ship, state);
+						if(energySource != null) {
+							System.out.println("Get Energy Action...");
+							if(energySource instanceof Base) { // Base Type
+								state.assignBaseToShip(shipID, energySource.getId());
+								root.edge = new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()), 
+										new PlanSearchNode(root, state));
+								root = root.edge.endNode;
+								frontier.push(root);
+								continue;
+							}
+							else { // Beacon Type
+								state.assignBeaconToShip(shipID, energySource.getId());
+								root.edge = new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_ENERGY, energySource.getId()), 
+										new PlanSearchNode(root, state));
+								root = root.edge.endNode;
+								frontier.push(root);
+								continue;
+							}
+						}
+					}
+				}
+				else {
+					continue; // Other actions will not be considered as guided by the precondition of being in asteroid gathering phase
+				}
 			}
-		}
-		// TODO: Adjust for the fact that ship won't be at initial location...
-		
-		// Return to base...
-		Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition()); // Get base to return to...
-		shipToActionQueue.get(shipID).offer(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()));
-		state.assignBaseToShip(shipID, closestBase.getId());
+		}	
+		*/
+		return new PlanSearchNode(root, state, new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, ship.getPosition())));
 	}
 	
 	/**
 	 * Function returns location that is closest to loiter location for ship
 	 * 
 	 * @param space	a reference to space
+	 * @param shipID 	passes a ship ID to compare
 	 * @return	an <code>int</code> representing the indice choice in convient base location, which
 	 * 				is a loiter point for ships
 	 */
-	private int closestToFlag(Toroidal2DPhysics space) {
+	private boolean isClosestToFlag(Toroidal2DPhysics space, UUID shipID) {
 		Position[] convientBaseLocation = state.getConvientBaseBuildingLocations();
 		Flag flag = WorldKnowledge.getOtherTeamFlag(space);
-		int result;
+		boolean result = false;
 		
 		if(space.findShortestDistance(flag.getPosition(), convientBaseLocation[0]) 
-				< space.findShortestDistance(flag.getPosition(), convientBaseLocation[1])) {
-			result = 0;
+				< space.findShortestDistance(flag.getPosition(), convientBaseLocation[1])) { // Flag carrier one
+			if(shipID.equals(state.getFlagCarrierOneID())) {
+				result = true;
+			}
 		}
-		else {
-			result = 1;
+		else { // Flag carrier two
+			if(shipID.equals(state.getFlagCarrierTwoID())) {
+				result = true;
+			}
 		}
 		
 		return result;
@@ -549,6 +823,116 @@ public class Planner {
 			actionType = action;
 			goalObject = null;
 			goalPosition = goal;
+		}
+	}
+	
+	/**
+	 * Since the planner employs a search... We will need 
+	 * a node implmentation
+	 *
+	 */
+	public class PlanSearchNode {
+		
+		/**
+		 * Reference to parent
+		 */
+		public PlanSearchNode parent;
+		
+		/**
+		 * The state contained in the node... 
+		 * It will allow algoirthm to check for goal state...
+		 */
+		public StateRepresentation internalState;
+		
+		/**
+		 * Connects action to next node
+		 */
+		public PlanSearchEdge edge;
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param p	the parent
+		 * @param s	the state
+		 * @param e	the edge
+		 */
+		public PlanSearchNode(PlanSearchNode p, StateRepresentation s, PlanSearchEdge e) {
+			parent = p;
+			internalState = s;
+			edge = e;
+		}
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param p	the parent
+		 * @param s	the state
+		 */
+		public PlanSearchNode(PlanSearchNode p, StateRepresentation s) {
+			parent = p;
+			internalState = s;
+			edge = null;
+		}
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param s	the state
+		 * @param e	the edge
+		 */
+		public PlanSearchNode(StateRepresentation s, PlanSearchEdge e) {
+			parent = null;
+			internalState = s;
+			edge = e;
+		}
+		
+		/**
+		 * Basic constructor 
+		 * 
+		 * @param s	the state
+		 */
+		public PlanSearchNode(StateRepresentation s) {
+			parent = null;
+			internalState = s;
+			edge = null;
+		}
+	}
+	
+	/**
+	 * Represents edge that will connect the nodes...
+	 * Essentially the action...
+	 *
+	 */
+	public class PlanSearchEdge {
+		
+		/**
+		 * The high level action that connects nodes
+		 */
+		public HighLevelAction edgeValue;
+		
+		/**
+		 * The node that is connected by the edge
+		 */
+		public PlanSearchNode endNode;
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param v	the edge value
+		 * @param n	the node connected at end of node
+		 */
+		public PlanSearchEdge(HighLevelAction v, PlanSearchNode n) {
+			edgeValue = v;
+			endNode = n;
+		}
+		
+		/**
+		 * Basic constructor
+		 * 
+		 * @param v	the edge value
+		 */
+		public PlanSearchEdge(HighLevelAction v) {
+			edgeValue = v;
 		}
 	}
 }
