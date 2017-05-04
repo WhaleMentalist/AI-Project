@@ -429,9 +429,9 @@ public class Planner {
 			
 			currentNode = frontier.pop();
 			
-			if(currentNode.parent != null) {
+			if(currentNode != null) {
 				// System.out.println("Parent copy");
-				stateCopy = new StateRepresentation(currentNode.parent.internalState);
+				stateCopy = new StateRepresentation(currentNode.internalState);
 			}
 			else {
 				// System.out.println("Root copy");
@@ -449,36 +449,43 @@ public class Planner {
 				if(action == ActionEnum.GET_FLAG) { 
 					if(isClosestToFlag(space, shipID) && stateCopy.getCurrentFlagCarrier() == null) { // Check preconditions...
 						// System.out.println("Getting flag action...");
-						stateCopy.setCurrentFlagCarrier(shipID); // Mutate for effects of action
-						frontier.push(new PlanSearchNode(currentNode, stateCopy, 
+						StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+						ownCopy.setCurrentFlagCarrier(shipID); // Mutate for effects of action
+						frontier.push(new PlanSearchNode(currentNode, ownCopy, 
 								new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_FLAG, otherTeamFlag.getId()))));
+						break;
 					}
 				}
 				else if(action == ActionEnum.RETURN_TO_BASE) {
 					if(shipID.equals(stateCopy.getCurrentFlagCarrier()) || ship.isCarryingFlag()) {
 						// System.out.println("Return to base action...");
 						Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
-						stateCopy.incrementTotalFlag();
-						stateCopy.setCurrentFlagCarrier(null);
-						frontier.push(new PlanSearchNode(currentNode, stateCopy, 
+						StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+						ownCopy.incrementTotalFlag();
+						ownCopy.setCurrentFlagCarrier(null);
+						frontier.push(new PlanSearchNode(currentNode, ownCopy, 
 								new PlanSearchEdge(new HighLevelAction(ActionEnum.RETURN_TO_BASE, closestBase.getId()))));
+						break;
 					}
 				}
 				else if(action == ActionEnum.LOITER_AT_LOCATION) {
 					if(!(isClosestToFlag(space, shipID)) && !(shipID.equals(stateCopy.getCurrentFlagCarrier())) || otherTeamFlag.isBeingCarried()) {
 						// System.out.println("Loiter action...");
 						if(shipID.equals(stateCopy.getFlagCarrierOneID())) {
-							frontier.push(new PlanSearchNode(currentNode, stateCopy, 
+							StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+							frontier.push(new PlanSearchNode(currentNode, ownCopy, 
 									new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, stateCopy.getLoiterLocations()[0]))));
 						}
 						else {
-							frontier.push(new PlanSearchNode(currentNode, stateCopy, 
+							StateRepresentation ownCopy = new StateRepresentation(stateCopy);
+							frontier.push(new PlanSearchNode(currentNode, ownCopy, 
 									new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, stateCopy.getLoiterLocations()[1]))));
 						}
 					}
 				}
 			}
 		}
+		
 		return new PlanSearchNode(root, state, 
 				new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION, ship.getPosition())));
 	}
@@ -509,10 +516,12 @@ public class Planner {
 			
 			currentNode = frontier.pop();
 			
-			if(currentNode.parent != null) {
-				stateCopy = new StateRepresentation(currentNode.parent.internalState);
+			if(currentNode != null) {
+				// System.out.println("Parent copy");
+				stateCopy = new StateRepresentation(currentNode.internalState);
 			}
 			else {
+				// System.out.println("Root copy");
 				stateCopy = new StateRepresentation(state);
 			}
 			
@@ -529,9 +538,10 @@ public class Planner {
 							stateCopy.getResourceCount(shipID) < WorldKnowledge.RESOURCE_THRESHOLD) {
 						Asteroid closestAsteroid = WorldKnowledge.getClosestAsteroid(space, ship, stateCopy);
 						if(closestAsteroid != null) {
+							StateRepresentation ownCopy = new StateRepresentation(stateCopy);
 							// System.out.println("Asteroid action...");
-							stateCopy.assignAsteroidToShip(space, shipID, closestAsteroid.getId());
-							frontier.push(new PlanSearchNode(currentNode, stateCopy, 
+							ownCopy.assignAsteroidToShip(space, shipID, closestAsteroid.getId());
+							frontier.push(new PlanSearchNode(currentNode, ownCopy, 
 									new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_ASTEROID, 
 											closestAsteroid.getId()))));
 						}
@@ -544,9 +554,10 @@ public class Planner {
 							stateCopy.getResourceCount(shipID) > 0 &&
 							ship.getEnergy() >= WorldKnowledge.ENERGY_THRESHOLD)) {
 						Base closestBase = WorldKnowledge.getClosestFriendlyBase(space, ship.getPosition());
+						StateRepresentation ownCopy = new StateRepresentation(stateCopy);
 						// System.out.println("Return to base action...");
-						stateCopy.assignBaseToShip(shipID, closestBase.getId());
-						frontier.push(new PlanSearchNode(currentNode, stateCopy, 
+						ownCopy.assignBaseToShip(shipID, closestBase.getId());
+						frontier.push(new PlanSearchNode(currentNode, ownCopy, 
 								new PlanSearchEdge(new HighLevelAction(ActionEnum.RETURN_TO_BASE,
 										closestBase.getId()))));
 					}
@@ -554,8 +565,9 @@ public class Planner {
 				else if(action == ActionEnum.LOITER_AT_LOCATION) {
 					if(ship.getEnergy() >= WorldKnowledge.ENERGY_THRESHOLD &&
 							stateCopy.getNumberOfAssignedAsteroids() >= WorldKnowledge.getMineableAsteroids(space).size()) {
+						StateRepresentation ownCopy = new StateRepresentation(stateCopy);
 						// System.out.println("Loiter action...");
-						frontier.push(new PlanSearchNode(currentNode, stateCopy, 
+						frontier.push(new PlanSearchNode(currentNode, ownCopy, 
 								new PlanSearchEdge(new HighLevelAction(ActionEnum.LOITER_AT_LOCATION,
 										ship.getPosition()))));
 					}
@@ -567,14 +579,16 @@ public class Planner {
 							// System.out.println("Get Energy Action...");
 
 							if(energySource instanceof Base) { // Base Type
+								StateRepresentation ownCopy = new StateRepresentation(stateCopy);
 								stateCopy.assignBaseToShip(shipID, energySource.getId());
-								frontier.push(new PlanSearchNode(currentNode, stateCopy,
+								frontier.push(new PlanSearchNode(currentNode, ownCopy,
 										new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_ENERGY, 
 												energySource.getId()))));
 							}
 							else { // Beacon Type
+								StateRepresentation ownCopy = new StateRepresentation(stateCopy);
 								stateCopy.assignBeaconToShip(shipID, energySource.getId());
-								frontier.push(new PlanSearchNode(currentNode, stateCopy,
+								frontier.push(new PlanSearchNode(currentNode, ownCopy,
 										new PlanSearchEdge(new HighLevelAction(ActionEnum.GET_ENERGY, 
 												energySource.getId()))));
 							}
